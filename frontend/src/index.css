@@ -1,0 +1,145 @@
+:root {
+  --primary-color: #0f172a;
+  --accent-color: #38bdf8;
+  --text-color: #f8fafc;
+  --bg-color: #1e293b;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--primary-color);
+  color: var(--text-color);
+  overflow: hidden;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Smart Window (Right) */
+.smart-window {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: black;
+  width: 100vw;
+  height: 100vh;
+}
+
+.ad-display {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.ad-content {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.5s ease;
+}
+
+.ad-overlay {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 15px;
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  max-width: 300px;
+}
+
+.ad-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0 0 5px 0;
+}
+
+.ad-cta {
+  display: inline-block;
+  background: var(--accent-color);
+  color: var(--primary-color);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: bold;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+/* Info Bar (Bottom) */
+.info-bar {
+  height: 80px;
+  background: rgba(15, 23, 42, 0.9);
+  display: flex;
+  align-items: center;
+  padding: 0 30px;
+  justify-content: space-between;
+  border-top: 1px solid #334155;
+}
+
+.weather-widget,
+.time-widget {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.2rem;
+}
+
+.news-ticker {
+  flex: 1;
+  margin: 0 40px;
+  white-space: nowrap;
+  overflow: hidden;
+  color: #cbd5e1;
+}
+
+/* Location Overlay */
+.location-overlay {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+}
+
+.location-box {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 15px 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  max-width: 300px;
+}
+
+.location-icon {
+  font-size: 2rem;
+}
+
+.location-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.location-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.location-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 2px 0 0 0;
+  color: white;
+  line-height: 1.2;
+}
