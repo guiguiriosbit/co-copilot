@@ -6,6 +6,7 @@ const Campaign = require('../models/Campaign');
 exports.heartbeat = async (req, res) => {
     try {
         const { lat, lng, weather, time } = req.body;
+        console.log('Heartbeat received:', { lat, lng, weather, time });
 
         if (!lat || !lng) {
             return res.status(400).json({ error: 'Location required' });
@@ -15,6 +16,7 @@ exports.heartbeat = async (req, res) => {
 
         // Fetch all zones (in a real app, you'd use spatial index to filter candidates first)
         const zones = await GeoZone.findAll({
+            order: [['createdAt', 'DESC']], // Prioritize newest zones (user created) over seed data
             include: [{
                 model: Ad,
                 include: [Campaign]
@@ -57,6 +59,7 @@ exports.heartbeat = async (req, res) => {
                     id: matchedAd.id,
                     type: matchedAd.type,
                     url: matchedAd.url,
+                    targetUrl: matchedAd.targetUrl, // Include targetUrl for QR code
                     duration: matchedAd.duration,
                     campaign: matchedAd.Campaign ? matchedAd.Campaign.name : 'Unknown'
                 }
@@ -71,6 +74,7 @@ exports.heartbeat = async (req, res) => {
                     id: 'default-fallback',
                     type: 'video',
                     url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', // Placeholder video
+                    targetUrl: 'https://commercial-copilot.demo', // Default QR for fallback
                     duration: 60,
                     campaign: 'General View'
                 }

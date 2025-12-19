@@ -11,6 +11,10 @@ const Ad = sequelize.define('Ad', {
         type: DataTypes.STRING,
         allowNull: false
     },
+    targetUrl: {
+        type: DataTypes.STRING,
+        allowNull: true // Optional, as some ads might not have a specific landing page
+    },
     duration: {
         type: DataTypes.INTEGER, // in seconds
         defaultValue: 10

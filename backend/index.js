@@ -6,9 +6,18 @@ const { sequelize } = require('./config/database');
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+// Robust CORS configuration
+app.use(cors({
+    origin: true, // Reflects the request origin
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+}));
+
+// Handle preflight requests explicitly - Removed due to Express 5 compatibility issue
+// app.options('*', cors());
 app.use(express.json());
 
 // Basic route
@@ -17,7 +26,13 @@ app.get('/', (req, res) => {
 });
 
 const adController = require('./controllers/adController');
+const adminController = require('./controllers/adminController');
+
 app.post('/api/heartbeat', adController.heartbeat);
+app.post('/api/admin/create', adminController.createBusiness);
+app.get('/api/admin/businesses', adminController.getBusinesses);
+app.put('/api/admin/business/:id', adminController.updateBusiness);
+app.delete('/api/admin/business/:id', adminController.deleteBusiness);
 
 // Sync database and start server
 sequelize.sync().then(() => {

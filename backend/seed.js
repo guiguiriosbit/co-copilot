@@ -26,6 +26,7 @@ async function seed() {
         const adCoffee = await Ad.create({
             type: 'image',
             url: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80',
+            targetUrl: 'https://starbucks.com/menu', // Added QR link
             duration: 10,
             contextRules: { time: ['morning'] },
             CampaignId: campBreakfast.id
@@ -34,6 +35,7 @@ async function seed() {
         const adVideo = await Ad.create({
             type: 'video',
             url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+            targetUrl: 'https://www.blender.org/about/projects/', // Added QR link
             duration: 60,
             contextRules: { time: ['evening', 'afternoon', 'morning'] },
             CampaignId: campDinner.id
