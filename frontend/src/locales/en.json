@@ -1,0 +1,73 @@
+{
+    "playerPage": {
+        "nearbyBusiness": "Nearby Business",
+        "currentLocation": "Current Location",
+        "gpsLabel": "GPS",
+        "locationLabel": "Loc"
+    },
+    "loginPage": {
+        "title": "Commercial Copilot",
+        "subtitle": "Contextual Advertising System",
+        "username": "Username",
+        "password": "Password",
+        "loginButton": "Login",
+        "adminButton": "Administrator",
+        "invalidCredentials": "Invalid credentials"
+    },
+    "adminPage": {
+        "title": "Administration Panel",
+        "backButton": "Back",
+        "createBusiness": "Create New Business",
+        "businessName": "Business Name",
+        "campaign": "Campaign",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "radius": "Radius (meters)",
+        "targetUrl": "Target URL",
+        "videoUrl": "Video URL",
+        "weatherCondition": "Weather Condition",
+        "timeOfDay": "Time of Day",
+        "createButton": "Create",
+        "cancel": "Cancel",
+        "editBusiness": "Edit Business",
+        "updateButton": "Update",
+        "deleteButton": "Delete",
+        "businessList": "Business List",
+        "actions": "Actions",
+        "edit": "Edit",
+        "delete": "Delete",
+        "weatherOptions": {
+            "any": "Any",
+            "sunny": "Sunny",
+            "rainy": "Rainy",
+            "cloudy": "Cloudy",
+            "snowy": "Snowy"
+        },
+        "timeOptions": {
+            "any": "Any",
+            "morning": "Morning",
+            "afternoon": "Afternoon",
+            "evening": "Evening"
+        }
+    },
+    "infoBar": {
+        "weather": {
+            "sunny": "Sunny",
+            "partlyCloudy": "Partly Cloudy",
+            "cloudy": "Cloudy",
+            "foggy": "Foggy",
+            "rainy": "Rainy",
+            "heavyRain": "Heavy Rain",
+            "snowy": "Snowy",
+            "thunderstorm": "Thunderstorm",
+            "loading": "Loading..."
+        }
+    },
+    "common": {
+        "loading": "Loading...",
+        "error": "Error",
+        "success": "Success",
+        "confirm": "Confirm",
+        "cancel": "Cancel"
+    }
+}

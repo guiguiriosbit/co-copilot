@@ -1,0 +1,73 @@
+{
+  "playerPage": {
+    "nearbyBusiness": "Negocio Cercano",
+    "currentLocation": "Ubicación Actual",
+    "gpsLabel": "GPS",
+    "locationLabel": "Loc"
+  },
+  "loginPage": {
+    "title": "Commercial Copilot",
+    "subtitle": "Sistema de Publicidad Contextual",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "loginButton": "Iniciar Sesión",
+    "adminButton": "Administrador",
+    "invalidCredentials": "Credenciales inválidas"
+  },
+  "adminPage": {
+    "title": "Panel de Administración",
+    "backButton": "Volver",
+    "createBusiness": "Crear Nuevo Negocio",
+    "businessName": "Nombre del Negocio",
+    "campaign": "Campaña",
+    "latitude": "Latitud",
+    "longitude": "Longitud",
+    "radius": "Radio (metros)",
+    "targetUrl": "URL Destino",
+    "videoUrl": "URL del Video",
+    "weatherCondition": "Condición Climática",
+    "timeOfDay": "Momento del Día",
+    "createButton": "Crear",
+    "cancel": "Cancelar",
+    "editBusiness": "Editar Negocio",
+    "updateButton": "Actualizar",
+    "deleteButton": "Eliminar",
+    "businessList": "Lista de Negocios",
+    "actions": "Acciones",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "weatherOptions": {
+      "any": "Cualquiera",
+      "sunny": "Soleado",
+      "rainy": "Lluvioso",
+      "cloudy": "Nublado",
+      "snowy": "Nevado"
+    },
+    "timeOptions": {
+      "any": "Cualquiera",
+      "morning": "Mañana",
+      "afternoon": "Tarde",
+      "evening": "Noche"
+    }
+  },
+  "infoBar": {
+    "weather": {
+      "sunny": "Soleado",
+      "partlyCloudy": "Parcialmente Nublado",
+      "cloudy": "Nublado",
+      "foggy": "Neblina",
+      "rainy": "Lluvioso",
+      "heavyRain": "Lluvia Fuerte",
+      "snowy": "Nevado",
+      "thunderstorm": "Tormenta",
+      "loading": "Cargando..."
+    }
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar"
+  }
+}

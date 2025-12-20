@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import './i18n'; // Initialize i18n
 import LoginPage from './components/LoginPage';
 import PlayerPage from './components/PlayerPage';
 import AdminPage from './components/AdminPage';

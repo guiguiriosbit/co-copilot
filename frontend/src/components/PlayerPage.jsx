@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
+import { detectLanguageFromAddress } from '../utils/languageDetector';
 import AdDisplay from './AdDisplay';
 import InfoBar from './InfoBar';
 import LocationOverlay from './LocationOverlay';
 
 const PlayerPage = () => {
+    const { t, i18n } = useTranslation();
     const [position, setPosition] = useState({ lat: 0, lng: 0 });
-    const [weather, setWeather] = useState('sunny');
+    const [weatherData, setWeatherData] = useState({ temp: '--', condition: 'Loading...' });
     const [timeOfDay, setTimeOfDay] = useState('morning');
     const [currentAd, setCurrentAd] = useState(null);
     const [logs, setLogs] = useState([]);
     const [address, setAddress] = useState('');
+    const [cityState, setCityState] = useState('');
     const [addressLoading, setAddressLoading] = useState(false);
 
     // Reverse Geocoding
@@ -26,6 +30,13 @@ const PlayerPage = () => {
             });
 
             if (response.data) {
+                // Detect language from location
+                const detectedLang = detectLanguageFromAddress(response.data);
+                if (detectedLang !== i18n.language) {
+                    i18n.changeLanguage(detectedLang);
+                    console.log(`Language changed to: ${detectedLang}`);
+                }
+
                 const addr = response.data.address;
                 const buildingName = response.data.name ||
                     addr.building ||
@@ -36,6 +47,10 @@ const PlayerPage = () => {
                     `${addr.road || ''} ${addr.house_number || ''}`.trim();
 
                 setAddress(buildingName || 'Unknown Location');
+
+                const city = addr.city || addr.town || addr.village || addr.county || '';
+                const state = addr.state || '';
+                setCityState(`${city}${city && state ? ', ' : ''}${state}`);
             }
         } catch (error) {
             console.error('Error fetching address:', error);
@@ -44,9 +59,41 @@ const PlayerPage = () => {
         }
     };
 
+    // Fetch Weather
+    const fetchWeather = async (lat, lng) => {
+        if (lat === 0 && lng === 0) return;
+        try {
+            const response = await fetch(
+                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`
+            );
+            const data = await response.json();
+
+            if (data.current_weather) {
+                const { temperature, weathercode } = data.current_weather;
+                let condition = 'Sunny';
+
+                // Simple WMO code mapping
+                if (weathercode >= 1 && weathercode <= 3) condition = 'Partly Cloudy';
+                if (weathercode >= 45 && weathercode <= 48) condition = 'Foggy';
+                if (weathercode >= 51 && weathercode <= 67) condition = 'Rainy';
+                if (weathercode >= 71 && weathercode <= 77) condition = 'Snowy';
+                if (weathercode >= 80 && weathercode <= 82) condition = 'Heavy Rain';
+                if (weathercode >= 95) condition = 'Thunderstorm';
+
+                setWeatherData({
+                    temp: Math.round(temperature),
+                    condition
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching weather:', error);
+        }
+    };
+
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             fetchAddress(position.lat, position.lng);
+            fetchWeather(position.lat, position.lng);
         }, 1000);
         return () => clearTimeout(timeoutId);
     }, [position]);
@@ -59,7 +106,9 @@ const PlayerPage = () => {
                 const response = await axios.post(backendUrl, {
                     lat: position.lat,
                     lng: position.lng,
-                    weather,
+                    lat: position.lat,
+                    lng: position.lng,
+                    weather: weatherData.condition.toLowerCase(),
                     time: timeOfDay
                 });
 
@@ -81,7 +130,7 @@ const PlayerPage = () => {
 
         const interval = setInterval(checkLocation, 2000);
         return () => clearInterval(interval);
-    }, [position, weather, timeOfDay, currentAd]);
+    }, [position, weatherData, timeOfDay, currentAd]);
 
     // Real Geolocation Hook
     useEffect(() => {
@@ -119,16 +168,16 @@ const PlayerPage = () => {
             <LocationOverlay
                 address={currentAd ? currentAd.campaign : address}
                 loading={addressLoading && !currentAd}
-                label={currentAd ? "Negocio Cercano" : "Ubicación Actual"}
+                label={currentAd ? t('playerPage.nearbyBusiness') : t('playerPage.currentLocation')}
             />
             <AdDisplay ad={currentAd} />
-            <InfoBar weather={weather} />
+            <InfoBar weatherData={weatherData} />
 
             {/* Debug Overlay */}
             <div style={{
                 position: 'absolute',
                 bottom: '100px',
-                right: '20px', // Moved to right
+                right: '20px',
                 textAlign: 'right',
                 background: 'rgba(0,0,0,0.7)',
                 color: '#00ff00',
@@ -138,10 +187,11 @@ const PlayerPage = () => {
                 zIndex: 9999,
                 pointerEvents: 'none'
             }}>
-                📍 GPS: {position.lat.toFixed(5)}, {position.lng.toFixed(5)} <br />
-                🏢 Addr: {address} <br />
-                {logs.length > 0 && <span style={{ color: 'red' }}>⚠️ {logs[logs.length - 1]}</span>}
+                📍 {t('playerPage.gpsLabel')}: {position.lat.toFixed(5)}, {position.lng.toFixed(5)} <br />
+                🏙️ {t('playerPage.locationLabel')}: {cityState || t('common.loading')}
             </div>
+
+
         </div>
     );
 };

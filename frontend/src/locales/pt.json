@@ -1,0 +1,73 @@
+{
+    "playerPage": {
+        "nearbyBusiness": "Negócio Próximo",
+        "currentLocation": "Localização Atual",
+        "gpsLabel": "GPS",
+        "locationLabel": "Loc"
+    },
+    "loginPage": {
+        "title": "Commercial Copilot",
+        "subtitle": "Sistema de Publicidade Contextual",
+        "username": "Usuário",
+        "password": "Senha",
+        "loginButton": "Entrar",
+        "adminButton": "Administrador",
+        "invalidCredentials": "Credenciais inválidas"
+    },
+    "adminPage": {
+        "title": "Painel de Administração",
+        "backButton": "Voltar",
+        "createBusiness": "Criar Novo Negócio",
+        "businessName": "Nome do Negócio",
+        "campaign": "Campanha",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "radius": "Raio (metros)",
+        "targetUrl": "URL de Destino",
+        "videoUrl": "URL do Vídeo",
+        "weatherCondition": "Condição Climática",
+        "timeOfDay": "Período do Dia",
+        "createButton": "Criar",
+        "cancel": "Cancelar",
+        "editBusiness": "Editar Negócio",
+        "updateButton": "Atualizar",
+        "deleteButton": "Excluir",
+        "businessList": "Lista de Negócios",
+        "actions": "Ações",
+        "edit": "Editar",
+        "delete": "Excluir",
+        "weatherOptions": {
+            "any": "Qualquer",
+            "sunny": "Ensolarado",
+            "rainy": "Chuvoso",
+            "cloudy": "Nublado",
+            "snowy": "Nevado"
+        },
+        "timeOptions": {
+            "any": "Qualquer",
+            "morning": "Manhã",
+            "afternoon": "Tarde",
+            "evening": "Noite"
+        }
+    },
+    "infoBar": {
+        "weather": {
+            "sunny": "Ensolarado",
+            "partlyCloudy": "Parcialmente Nublado",
+            "cloudy": "Nublado",
+            "foggy": "Neblina",
+            "rainy": "Chuvoso",
+            "heavyRain": "Chuva Forte",
+            "snowy": "Nevado",
+            "thunderstorm": "Tempestade",
+            "loading": "Carregando..."
+        }
+    },
+    "common": {
+        "loading": "Carregando...",
+        "error": "Erro",
+        "success": "Sucesso",
+        "confirm": "Confirmar",
+        "cancel": "Cancelar"
+    }
+}
