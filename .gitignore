@@ -1,0 +1,72 @@
+# Node modules
+node_modules/
+*/node_modules/
+
+# Build outputs
+frontend/dist/
+frontend/build/
+
+# Database
+backend/database.sqlite
+backend/*.sqlite
+*.sqlite
+
+# Environment variables
+.env
+.env.local
+.env.production.local
+.env.development.local
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Videos (subir después vía admin panel)
+backend/public/videoloop/*.mp4
+backend/public/videoloop/*.webm
+backend/public/videoloop/*.ogg
+backend/public/videoloop/*.mov
+backend/public/videoloop/*.avi
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Temporary files
+*.tmp
+.cache/
+.parcel-cache/
+
+# OS
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# Testing
+coverage/
+.nyc_output/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Misc
+*.bak
+*.backup

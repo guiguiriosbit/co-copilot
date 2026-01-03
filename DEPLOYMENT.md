@@ -171,6 +171,9 @@ server {
     listen 80;
     server_name comercialcopilot.tudominio.com;
 
+    # Permitir uploads de videos grandes (hasta 100MB)
+    client_max_body_size 100M;
+
     # Servir archivos estáticos del frontend
     root /var/www/commercial_copilot/frontend/dist;
     index index.html;
@@ -190,9 +193,21 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Timeout para uploads grandes
+        proxy_read_timeout 300;
+        proxy_connect_timeout 300;
+        proxy_send_timeout 300;
     }
 
-    # Servir archivos estáticos
+    # Servir archivos públicos (videos del loop)
+    location /public {
+        alias /var/www/commercial_copilot/backend/public;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Servir archivos estáticos del frontend
     location / {
         try_files $uri $uri/ /index.html;
     }
@@ -245,9 +260,29 @@ sudo chown -R www-data:www-data /var/www/commercial_copilot/backend/database.sql
 sudo chmod 664 /var/www/commercial_copilot/backend/database.sqlite
 ```
 
-## Paso 9: Verificación Final
+## Paso 9: Configurar Directorio de Video Loop
 
-### 9.1 Verificar servicios
+### 9.1 Crear directorio para videos
+```bash
+mkdir -p /var/www/commercial_copilot/backend/public/videoloop
+```
+
+### 9.2 Configurar permisos para permitir uploads
+```bash
+sudo chown -R www-data:www-data /var/www/commercial_copilot/backend/public/videoloop
+sudo chmod 755 /var/www/commercial_copilot/backend/public/videoloop
+```
+
+### 9.3 Verificar que el directorio existe
+```bash
+ls -la /var/www/commercial_copilot/backend/public/
+```
+
+> **Nota:** Los videos se subirán después a través del panel de administración. No es necesario subir videos durante el despliegue inicial.
+
+## Paso 10: Verificación Final
+
+### 10.1 Verificar servicios
 ```bash
 # Backend
 pm2 status
@@ -260,7 +295,7 @@ sudo systemctl status nginx
 # https://comercialcopilot.tudominio.com
 ```
 
-### 9.2 Ver logs en caso de problemas
+### 10.2 Ver logs en caso de problemas
 ```bash
 # Logs del backend
 pm2 logs commercial-copilot-backend
@@ -269,7 +304,7 @@ pm2 logs commercial-copilot-backend
 sudo tail -f /var/log/nginx/commercial_copilot_error.log
 ```
 
-## Paso 10: Mantenimiento
+## Paso 11: Mantenimiento
 
 ### Actualizar la aplicación
 ```bash
@@ -313,6 +348,16 @@ sudo crontab -e
 # 0 2 * * * cp /var/www/commercial_copilot/backend/database.sqlite /var/www/commercial_copilot/backend/database.sqlite.backup.$(date +\%Y\%m\%d)
 ```
 
+### Backup de videos del loop
+```bash
+# Crear backup de videos
+tar -czf videoloop_backup_$(date +%Y%m%d).tar.gz \
+   /var/www/commercial_copilot/backend/public/videoloop/
+
+# Mover a directorio de backups
+mv videoloop_backup_*.tar.gz /var/backups/
+```
+
 ## Solución de Problemas Comunes
 
 ### El backend no inicia
@@ -337,6 +382,21 @@ sudo chmod 775 /var/www/commercial_copilot/backend/
 sudo chmod 664 /var/www/commercial_copilot/backend/database.sqlite
 ```
 
+### Error al subir videos en el panel admin
+```bash
+# Verificar permisos del directorio videoloop
+ls -la /var/www/commercial_copilot/backend/public/videoloop/
+sudo chown -R www-data:www-data /var/www/commercial_copilot/backend/public/videoloop/
+sudo chmod 755 /var/www/commercial_copilot/backend/public/videoloop/
+```
+
+### Videos no se reproducen en el player
+```bash
+# Verificar que Nginx esté sirviendo archivos estáticos
+curl http://localhost/public/videoloop/
+# Verificar configuración de Nginx para servir /public
+```
+
 ## Seguridad Adicional
 
 ### Configurar firewall
@@ -349,6 +409,12 @@ sudo ufw enable
 
 ### Limitar acceso al backend
 En el archivo de configuración de Nginx, puedes agregar autenticación básica o restricciones de IP para rutas administrativas.
+
+### Limitar tamaño de uploads (para videos grandes)
+En la configuración de Nginx, agregar:
+```nginx
+client_max_body_size 100M;
+```
 
 ---
 

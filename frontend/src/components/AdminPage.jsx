@@ -14,8 +14,15 @@ const AdminPage = ({ onBack }) => {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
 
+    // Video loop state
+    const [loopVideos, setLoopVideos] = useState([]);
+    const [uploadingVideo, setUploadingVideo] = useState(false);
+    const [uploadMessage, setUploadMessage] = useState('');
+    const [selectedFile, setSelectedFile] = useState(null);
+
     useEffect(() => {
         fetchBusinesses();
+        fetchLoopVideos();
     }, []);
 
     const fetchBusinesses = async () => {
@@ -108,6 +115,85 @@ const AdminPage = ({ onBack }) => {
         setFormData({ name: '', videoUrl: '', targetUrl: '', lat: '', lng: '' });
         setEditingId(null);
     };
+
+    // Video Loop Management Functions
+    const fetchLoopVideos = async () => {
+        try {
+            const response = await axios.get('/api/admin/videoloop');
+            setLoopVideos(response.data);
+        } catch (error) {
+            console.error('Error fetching loop videos:', error);
+        }
+    };
+
+    const handleFileSelect = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // Validate file type
+            const validTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please select a valid video file (MP4, WebM, OGG, or MOV)');
+                return;
+            }
+            // Validate file size (100MB limit)
+            if (file.size > 100 * 1024 * 1024) {
+                alert('File size must be less than 100MB');
+                return;
+            }
+            setSelectedFile(file);
+        }
+    };
+
+    const handleUploadVideo = async () => {
+        if (!selectedFile) {
+            alert('Please select a video file first');
+            return;
+        }
+
+        setUploadingVideo(true);
+        setUploadMessage('');
+
+        try {
+            const formData = new FormData();
+            formData.append('video', selectedFile);
+
+            await axios.post('/api/admin/videoloop/upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            setUploadMessage('Video uploaded successfully!');
+            setSelectedFile(null);
+            // Reset file input
+            document.getElementById('videoFileInput').value = '';
+            fetchLoopVideos();
+        } catch (error) {
+            console.error('Error uploading video:', error);
+            setUploadMessage('Error uploading video. Please try again.');
+        } finally {
+            setUploadingVideo(false);
+        }
+    };
+
+    const handleDeleteLoopVideo = async (filename) => {
+        if (!window.confirm(`Are you sure you want to delete ${filename}?`)) return;
+
+        try {
+            await axios.delete(`/api/admin/videoloop/${encodeURIComponent(filename)}`);
+            fetchLoopVideos();
+        } catch (error) {
+            console.error('Error deleting video:', error);
+            alert('Error deleting video');
+        }
+    };
+
+    const formatFileSize = (bytes) => {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    };
+
 
     return (
         <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto', color: 'white', background: '#1e293b', minHeight: '100vh' }}>
@@ -203,6 +289,92 @@ const AdminPage = ({ onBack }) => {
                     </div>
                 ))}
                 {businesses.length === 0 && <p>No businesses found.</p>}
+            </div>
+
+            {/* Video Loop Management Section */}
+            <h2 style={{ marginTop: '60px', borderTop: '2px solid #475569', paddingTop: '40px' }}>Video Loop Management</h2>
+            <p style={{ color: '#94a3b8', marginBottom: '20px' }}>
+                Upload videos that will play in a loop when the device is not near any registered business location.
+            </p>
+
+            {/* Upload Section */}
+            <div style={{ background: '#0f172a', padding: '20px', borderRadius: '10px', marginBottom: '20px' }}>
+                <h3 style={{ marginTop: 0 }}>Upload New Loop Video</h3>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input
+                        id="videoFileInput"
+                        type="file"
+                        accept="video/mp4,video/webm,video/ogg,video/quicktime"
+                        onChange={handleFileSelect}
+                        style={{ flex: 1, minWidth: '200px', padding: '10px', borderRadius: '5px', border: 'none' }}
+                    />
+                    <button
+                        onClick={handleUploadVideo}
+                        disabled={!selectedFile || uploadingVideo}
+                        style={{
+                            padding: '10px 20px',
+                            background: selectedFile && !uploadingVideo ? '#22c55e' : '#64748b',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '5px',
+                            cursor: selectedFile && !uploadingVideo ? 'pointer' : 'not-allowed',
+                            fontWeight: 'bold'
+                        }}
+                    >
+                        {uploadingVideo ? 'Uploading...' : '📤 Upload Video'}
+                    </button>
+                </div>
+                {selectedFile && (
+                    <p style={{ marginTop: '10px', color: '#94a3b8', fontSize: '0.9rem' }}>
+                        Selected: {selectedFile.name} ({formatFileSize(selectedFile.size)})
+                    </p>
+                )}
+                {uploadMessage && (
+                    <p style={{ marginTop: '10px', color: uploadMessage.includes('success') ? '#4ade80' : '#f87171' }}>
+                        {uploadMessage}
+                    </p>
+                )}
+            </div>
+
+            {/* Loop Videos List */}
+            <h3>Current Loop Videos ({loopVideos.length})</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '15px' }}>
+                {loopVideos.map((video, index) => (
+                    <div key={video.filename} style={{ background: '#334155', padding: '15px', borderRadius: '8px' }}>
+                        <video
+                            src={video.url}
+                            style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '5px', marginBottom: '10px' }}
+                            controls
+                        />
+                        <p style={{ margin: '5px 0', fontSize: '0.85rem', wordBreak: 'break-word' }}>
+                            <strong>#{index + 1}:</strong> {video.filename}
+                        </p>
+                        <p style={{ margin: '5px 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+                            Size: {formatFileSize(video.size)}
+                        </p>
+                        <button
+                            onClick={() => handleDeleteLoopVideo(video.filename)}
+                            style={{
+                                width: '100%',
+                                marginTop: '10px',
+                                padding: '8px',
+                                background: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            🗑️ Delete
+                        </button>
+                    </div>
+                ))}
+                {loopVideos.length === 0 && (
+                    <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#64748b', padding: '40px' }}>
+                        No loop videos uploaded yet. Upload your first video above!
+                    </p>
+                )}
             </div>
         </div>
     );

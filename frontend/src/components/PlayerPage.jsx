@@ -12,6 +12,7 @@ const PlayerPage = () => {
     const [weatherData, setWeatherData] = useState({ temp: '--', condition: 'Loading...' });
     const [timeOfDay, setTimeOfDay] = useState('morning');
     const [currentAd, setCurrentAd] = useState(null);
+    const [loopVideos, setLoopVideos] = useState([]);
     const [logs, setLogs] = useState([]);
     const [address, setAddress] = useState('');
     const [cityState, setCityState] = useState('');
@@ -106,21 +107,28 @@ const PlayerPage = () => {
                 const response = await axios.post(backendUrl, {
                     lat: position.lat,
                     lng: position.lng,
-                    lat: position.lat,
-                    lng: position.lng,
                     weather: weatherData.condition.toLowerCase(),
                     time: timeOfDay
                 });
 
                 if (response.data.action === 'play') {
+                    // Zone detected - play location-specific ad
                     if (!currentAd || currentAd.id !== response.data.ad.id) {
                         setCurrentAd(response.data.ad);
+                        setLoopVideos([]); // Clear loop videos when showing ad
                         addLog(`Playing ad: ${response.data.ad.campaign}`);
                     }
-                } else {
+                } else if (response.data.action === 'loop') {
+                    // No zone - play loop videos
                     if (currentAd) {
                         setCurrentAd(null);
-                        addLog('Exited zone. Default content.');
+                        addLog('Exited zone. Resuming video loop.');
+                    }
+                    if (JSON.stringify(loopVideos) !== JSON.stringify(response.data.loopVideos)) {
+                        setLoopVideos(response.data.loopVideos);
+                        if (response.data.loopVideos.length > 0) {
+                            addLog(`Video loop loaded: ${response.data.loopVideos.length} videos`);
+                        }
                     }
                 }
             } catch (error) {
@@ -130,7 +138,7 @@ const PlayerPage = () => {
 
         const interval = setInterval(checkLocation, 2000);
         return () => clearInterval(interval);
-    }, [position, weatherData, timeOfDay, currentAd]);
+    }, [position, weatherData, timeOfDay, currentAd, loopVideos]);
 
     // Real Geolocation Hook
     useEffect(() => {
@@ -170,26 +178,10 @@ const PlayerPage = () => {
                 loading={addressLoading && !currentAd}
                 label={currentAd ? t('playerPage.nearbyBusiness') : t('playerPage.currentLocation')}
             />
-            <AdDisplay ad={currentAd} />
+            <AdDisplay ad={currentAd} loopVideos={loopVideos} />
             <InfoBar weatherData={weatherData} />
 
-            {/* Debug Overlay */}
-            <div style={{
-                position: 'absolute',
-                bottom: '100px',
-                right: '20px',
-                textAlign: 'right',
-                background: 'rgba(0,0,0,0.7)',
-                color: '#00ff00',
-                padding: '10px',
-                borderRadius: '5px',
-                fontFamily: 'monospace',
-                zIndex: 9999,
-                pointerEvents: 'none'
-            }}>
-                📍 {t('playerPage.gpsLabel')}: {position.lat.toFixed(5)}, {position.lng.toFixed(5)} <br />
-                🏙️ {t('playerPage.locationLabel')}: {cityState || t('common.loading')}
-            </div>
+
 
 
         </div>

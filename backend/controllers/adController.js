@@ -65,20 +65,34 @@ exports.heartbeat = async (req, res) => {
                 }
             });
         } else {
-            // Fallback: Play a default video if no zone matches
-            // This satisfies the requirement to "show video of the building or business nearby"
-            // We'll use a generic city/building video as fallback
-            res.json({
-                action: 'play',
-                ad: {
-                    id: 'default-fallback',
-                    type: 'video',
-                    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', // Placeholder video
-                    targetUrl: 'https://commercial-copilot.demo', // Default QR for fallback
-                    duration: 60,
-                    campaign: 'General View'
-                }
-            });
+            // No zone matched - return loop videos
+            const fs = require('fs').promises;
+            const path = require('path');
+            const videoloopDir = path.join(__dirname, '../public/videoloop');
+
+            try {
+                await fs.mkdir(videoloopDir, { recursive: true });
+                const files = await fs.readdir(videoloopDir);
+                const videoFiles = files
+                    .filter(file => {
+                        const ext = path.extname(file).toLowerCase();
+                        return ['.mp4', '.webm', '.ogg', '.mov'].includes(ext);
+                    })
+                    .sort() // Alphabetical order for consistent playback
+                    .map(file => `/public/videoloop/${file}`);
+
+                res.json({
+                    action: 'loop',
+                    loopVideos: videoFiles
+                });
+            } catch (error) {
+                console.error('Error reading videoloop directory:', error);
+                // Fallback if directory read fails
+                res.json({
+                    action: 'loop',
+                    loopVideos: []
+                });
+            }
         }
 
     } catch (error) {

@@ -27,12 +27,23 @@ app.get('/', (req, res) => {
 
 const adController = require('./controllers/adController');
 const adminController = require('./controllers/adminController');
+const videoLoopController = require('./controllers/videoLoopController');
 
+// Serve static files from public directory
+app.use('/public', express.static('public'));
+
+// Routes
 app.post('/api/heartbeat', adController.heartbeat);
 app.post('/api/admin/create', adminController.createBusiness);
 app.get('/api/admin/businesses', adminController.getBusinesses);
 app.put('/api/admin/business/:id', adminController.updateBusiness);
 app.delete('/api/admin/business/:id', adminController.deleteBusiness);
+
+// Video loop management routes
+app.get('/api/admin/videoloop', videoLoopController.listLoopVideos);
+app.post('/api/admin/videoloop/upload', videoLoopController.uploadLoopVideo);
+app.delete('/api/admin/videoloop/:filename', videoLoopController.deleteLoopVideo);
+
 
 // Sync database and start server
 sequelize.sync().then(() => {
