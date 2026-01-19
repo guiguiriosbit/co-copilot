@@ -41,6 +41,20 @@ const countryToLanguage = {
     'PT': 'pt', // Portugal
     'AO': 'pt', // Angola
     'MZ': 'pt', // Mozambique
+
+    // French-speaking countries
+    'FR': 'fr', // France
+    'BE': 'fr', // Belgium
+    'CH': 'fr', // Switzerland
+    'MC': 'fr', // Monaco
+    'LU': 'fr', // Luxembourg
+    'SN': 'fr', // Senegal
+    'CI': 'fr', // Ivory Coast
+    'MG': 'fr', // Madagascar
+    'CM': 'fr', // Cameroon
+    'NE': 'fr', // Niger
+    'ML': 'fr', // Mali
+    'TG': 'fr', // Togo
 };
 
 /**

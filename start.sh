@@ -10,6 +10,10 @@ cleanup() {
 
 trap cleanup SIGINT SIGTERM
 
+# Cleanup any stale processes on our ports
+echo "Checking for stale processes on ports 3001 and 5173..."
+lsof -ti :3001,5173 | xargs kill -9 2>/dev/null
+
 # Install and start backend
 echo "---------------------------------------------------"
 echo "Setting up Backend..."

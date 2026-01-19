@@ -3,7 +3,7 @@ import { Cloud, Sun, Clock, CloudRain, CloudSnow, CloudLightning, Wind } from 'l
 import { useTranslation } from 'react-i18next';
 
 const InfoBar = ({ weatherData }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [time, setTime] = useState(new Date());
     const [news, setNews] = useState([]);
 
@@ -16,35 +16,51 @@ const InfoBar = ({ weatherData }) => {
     // Fetch News
     useEffect(() => {
         const fetchNews = async () => {
-            const categories = [
-                { id: 'sports', name: 'Sports', url: 'https://www.espn.com/espn/rss/news' },
-                { id: 'entertainment', name: 'Entertainment', url: 'https://www.usmagazine.com/feed/' },
-                { id: 'economy', name: 'Economy', url: 'https://www.economist.com/finance-and-economics/rss.xml' },
-                { id: 'local_politics', name: 'Local Politics', url: 'https://www.eltiempo.com/rss/politica.xml' },
-                { id: 'int_politics', name: 'Int. Politics', url: 'http://rss.cnn.com/rss/edition_world.rss' },
-                { id: 'technology', name: 'Technology', url: 'https://techcrunch.com/feed/' }
-            ];
+            const lang = i18n.language || 'es';
+
+            const feedsByLang = {
+                es: [
+                    { id: 'sports', name: 'Deportes', url: 'https://www.espn.com/espn/rss/news' },
+                    { id: 'entertainment', name: 'Entretenimiento', url: 'https://www.usmagazine.com/feed/' },
+                    { id: 'economy', name: 'Economía', url: 'https://www.economist.com/finance-and-economics/rss.xml' },
+                    { id: 'local_politics', name: 'Política', url: 'https://www.eltiempo.com/rss/politica.xml' },
+                    { id: 'technology', name: 'Tecnología', url: 'https://techcrunch.com/feed/' }
+                ],
+                en: [
+                    { id: 'sports', name: 'Sports', url: 'http://rss.cnn.com/rss/edition_sport.rss' },
+                    { id: 'entertainment', name: 'Entertainment', url: 'http://rss.cnn.com/rss/edition_entertainment.rss' },
+                    { id: 'economy', name: 'Economy', url: 'http://rss.cnn.com/rss/edition_business.rss' },
+                    { id: 'technology', name: 'Technology', url: 'https://www.theverge.com/rss/index.xml' },
+                    { id: 'world', name: 'World', url: 'http://rss.cnn.com/rss/edition_world.rss' }
+                ],
+                fr: [
+                    { id: 'sports', name: 'Sports', url: 'https://www.lequipe.fr/rss/actu_rss.xml' },
+                    { id: 'entertainment', name: 'Culture', url: 'https://www.lefigaro.fr/rss/figaro_culture.xml' },
+                    { id: 'economy', name: 'Économie', url: 'https://www.lesechos.fr/rss/rss_economie.xml' },
+                    { id: 'technology', name: 'Tech', url: 'https://www.01net.com/flux-rss/actualites/' },
+                    { id: 'world', name: 'Monde', url: 'https://www.lemonde.fr/rss/une.xml' }
+                ],
+                pt: [
+                    { id: 'sports', name: 'Esportes', url: 'https://ge.globo.com/rst/feed/esporte/' },
+                    { id: 'entertainment', name: 'Gshow', url: 'https://gshow.globo.com/rss/gshow/' },
+                    { id: 'economy', name: 'Economia', url: 'https://g1.globo.com/rss/g1/economia/' },
+                    { id: 'technology', name: 'Tecnologia', url: 'https://g1.globo.com/rss/g1/tecnologia/' },
+                    { id: 'world', name: 'Mundo', url: 'https://g1.globo.com/rss/g1/mundo/' }
+                ]
+            };
+
+            const categories = feedsByLang[lang.startsWith('en') ? 'en' : lang.startsWith('pt') ? 'pt' : lang.startsWith('fr') ? 'fr' : 'es'];
 
             // Fallback data (5 items per category)
             const fallbackData = {
-                sports: [
-                    "Local team wins championship in thriller", "Star player announces retirement", "World Cup host city announced", "New record set in marathon", "Playoffs schedule released"
-                ],
-                entertainment: [
-                    "Award season nominations announced", "Top movie breaks box office records", "Celebrity charity concert raises millions", "New streaming series goes viral", "Music festival lineup revealed"
-                ],
-                economy: [
-                    "Global markets rally on positive data", "Inflation rates drop slightly", "Tech giant acquires startup", "New trade agreement signed", "Cryptocurrency sees volatile week"
-                ],
-                local_politics: [
-                    "New infrastructure project approved", "City council debates budget", "Mayor announces new initiative", "Public transport updates planned", "Community center opening soon"
-                ],
-                int_politics: [
-                    "Peace summit scheduled for next month", "International trade talks resume", "UN releases climate report", "Diplomatic visit strengthens ties", "Global health initiative launched"
-                ],
-                technology: [
-                    "New AI model surpasses expectations", "Electric vehicle battery breakthrough", "Latest smartphone released", "Space mission successfully lands", "Cybersecurity measures updated"
-                ]
+                sports: ["Score updates...", "Match highlights...", "Tournament news...", "Athlete profiles...", "League standings..."],
+                entertainment: ["Movie releases...", "Music awards...", "Celebrity gossip...", "TV show reviews...", "Art exhibitions..."],
+                economy: ["Market trends...", "Currency values...", "Startup funding...", "Trade agreements...", "Industrial growth..."],
+                technology: ["AI breakthroughs...", "Gadget launches...", "Software updates...", "Cybersecurity alerts...", "Space exploration..."],
+                local_politics: ["City council news...", "Legislative updates...", "Public initiatives...", "Economic policy...", "Civic events..."],
+                world: ["Global events...", "International relations...", "Climate reports...", "Diplomatic talks...", "Summit outcomes..."],
+                culture: ["Expositions d'art...", "Sorties cinéma...", "Événements culturels...", "Festivals de musique...", "Critiques de livres..."],
+                economie: ["Bourse en direct...", "Indicateurs économiques...", "Fusions et acquisitions...", "Politique fiscale...", "Commerce extérieur..."],
             };
 
             let interleavedNews = [];
@@ -59,15 +75,14 @@ const InfoBar = ({ weatherData }) => {
                             }
                             throw new Error('Feed failed');
                         })
-                        .catch(() => ({ category: cat.name, items: fallbackData[cat.id] }))
+                        .catch(() => ({ category: cat.name, items: fallbackData[cat.id] || ["Loading news..."] }))
                 );
 
                 const results = await Promise.all(promises);
 
-                // Interleave items: 1st from each, then 2nd from each, etc.
                 for (let i = 0; i < 5; i++) {
                     results.forEach(catResult => {
-                        if (catResult.items[i]) {
+                        if (catResult && catResult.items && catResult.items[i]) {
                             interleavedNews.push({
                                 title: catResult.items[i],
                                 category: catResult.category
@@ -80,24 +95,14 @@ const InfoBar = ({ weatherData }) => {
 
             } catch (error) {
                 console.error('Error fetching news:', error);
-                // Fallback interleaving
-                let fallbackInterleaved = [];
-                for (let i = 0; i < 5; i++) {
-                    categories.forEach(cat => {
-                        fallbackInterleaved.push({
-                            title: fallbackData[cat.id][i],
-                            category: cat.name
-                        });
-                    });
-                }
-                setNews(fallbackInterleaved);
+                setNews([{ title: "Unable to load news at the moment", category: "System" }]);
             }
         };
 
         fetchNews();
         const interval = setInterval(fetchNews, 300000); // Update every 5 mins
         return () => clearInterval(interval);
-    }, []);
+    }, [i18n.language]);
 
     // Translate weather condition
     const translateWeatherCondition = (condition) => {

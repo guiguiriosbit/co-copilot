@@ -9,11 +9,25 @@ const LoginPage = () => {
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
+    const requestFullscreen = () => {
+        const element = document.documentElement;
+        if (element.requestFullscreen) {
+            element.requestFullscreen();
+        } else if (element.webkitRequestFullscreen) {
+            element.webkitRequestFullscreen();
+        } else if (element.msRequestFullscreen) {
+            element.msRequestFullscreen();
+        }
+    };
+
     const handleLogin = (e) => {
         e.preventDefault();
         // Simple mock validation for MVP
         if (username === 'client' && password === 'demo') {
-            // In a real app, you'd store a token here
+            // Attempt fullscreen
+            requestFullscreen();
+
+            // Store auth and navigate
             localStorage.setItem('isAuthenticated', 'true');
             navigate('/player');
         } else {

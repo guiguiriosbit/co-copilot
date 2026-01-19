@@ -17,6 +17,11 @@ const Campaign = sequelize.define('Campaign', {
     endDate: {
         type: DataTypes.DATE,
         allowNull: false
+    },
+    status: {
+        type: DataTypes.STRING,
+        defaultValue: 'active',
+        allowNull: false
     }
 });
 

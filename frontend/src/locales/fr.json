@@ -1,0 +1,73 @@
+{
+    "playerPage": {
+        "nearbyBusiness": "Commerce à Proximité",
+        "currentLocation": "Localisation Actuelle",
+        "gpsLabel": "GPS",
+        "locationLabel": "Loc"
+    },
+    "loginPage": {
+        "title": "Commercial Copilot",
+        "subtitle": "Système de Publicité Contextuelle",
+        "username": "Utilisateur",
+        "password": "Mot de passe",
+        "loginButton": "Se Connecter",
+        "adminButton": "Administrateur",
+        "invalidCredentials": "Identifiants invalides"
+    },
+    "adminPage": {
+        "title": "Panneau d'Administration",
+        "backButton": "Retour",
+        "createBusiness": "Créer un Nouveau Commerce",
+        "businessName": "Nom du Commerce",
+        "campaign": "Campagne",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "radius": "Rayon (mètres)",
+        "targetUrl": "URL Cible",
+        "videoUrl": "URL de la Vidéo",
+        "weatherCondition": "Condition Météo",
+        "timeOfDay": "Moment de la Journée",
+        "createButton": "Créer",
+        "cancel": "Annuler",
+        "editBusiness": "Modifier le Commerce",
+        "updateButton": "Mettre à jour",
+        "deleteButton": "Supprimer",
+        "businessList": "Liste des Commerces",
+        "actions": "Actions",
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "weatherOptions": {
+            "any": "Tous",
+            "sunny": "Ensoleillé",
+            "rainy": "Pluvieux",
+            "cloudy": "Nuageux",
+            "snowy": "Neigeux"
+        },
+        "timeOptions": {
+            "any": "Tous",
+            "morning": "Matin",
+            "afternoon": "Après-midi",
+            "evening": "Soir"
+        }
+    },
+    "infoBar": {
+        "weather": {
+            "sunny": "Ensoleillé",
+            "partlyCloudy": "Partiellement Nuageux",
+            "cloudy": "Nuageux",
+            "foggy": "Brouillard",
+            "rainy": "Pluvieux",
+            "heavyRain": "Forte Pluie",
+            "snowy": "Neigeux",
+            "thunderstorm": "Orage",
+            "loading": "Chargement..."
+        }
+    },
+    "common": {
+        "loading": "Chargement...",
+        "error": "Erreur",
+        "success": "Succès",
+        "confirm": "Confirmer",
+        "cancel": "Annuler"
+    }
+}

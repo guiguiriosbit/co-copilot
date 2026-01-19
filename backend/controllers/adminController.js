@@ -11,12 +11,13 @@ exports.createBusiness = async (req, res) => {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        // 1. Create Campaign (Simplified: 1 Campaign per Business)
+        // Create Campaign (Simplified: 1 Campaign per Business)
         const campaign = await Campaign.create({
             name: `${name} Campaign`,
             advertiser: name,
             startDate: new Date(),
-            endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)) // 1 year default
+            endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), // 1 year default
+            status: 'active'
         });
 
         // 2. Create Ad
@@ -29,12 +30,9 @@ exports.createBusiness = async (req, res) => {
         });
 
         // 3. Create GeoZone (100m radius)
-        // Create a point
+        // ... (rest of create logic same)
         const center = point([parseFloat(lng), parseFloat(lat)]);
-        // Buffer 0.1 km = 100m
         const buffered = buffer(center, 0.1, { units: 'kilometers' });
-
-        // Extract geometry for storage
         const polygonGeometry = buffered.geometry;
 
         const zone = await GeoZone.create({
@@ -43,10 +41,13 @@ exports.createBusiness = async (req, res) => {
             AdId: ad.id
         });
 
+        console.log(`>>> [ADMIN] Created Business: ${name}, AdId: ${ad.id}, ZoneId: ${zone.id}`);
+
         res.status(201).json({
             message: 'Business created successfully',
             business: {
-                name,
+                name: campaign.name,
+                status: campaign.status,
                 campaignId: campaign.id,
                 adId: ad.id,
                 zoneId: zone.id
@@ -78,7 +79,7 @@ exports.getBusinesses = async (req, res) => {
 exports.updateBusiness = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, videoUrl, targetUrl, lat, lng } = req.body;
+        const { name, videoUrl, targetUrl, lat, lng, status } = req.body;
 
         const campaign = await Campaign.findByPk(id);
         if (!campaign) {
@@ -87,6 +88,7 @@ exports.updateBusiness = async (req, res) => {
 
         // Update Campaign
         if (name) campaign.name = name;
+        if (status) campaign.status = status;
         await campaign.save();
 
         // Update Ad (Assuming 1 ad per campaign for this MVP)

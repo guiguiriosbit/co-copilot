@@ -1,129 +1,204 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QRCode from 'react-qr-code';
 
-const AdDisplay = ({ ad, loopVideos = [] }) => {
+const AdDisplay = ({ ad, loopVideos = [], address, addressLoading, addressLabel, onAdEnded, onLoopCycleComplete }) => {
     const [currentLoopIndex, setCurrentLoopIndex] = useState(0);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const videoRef = useRef(null);
-    const previousAdRef = useRef(null);
+    const imageTimerRef = useRef(null);
 
-    // Handle video loop advancement
-    const handleVideoEnded = () => {
-        if (!ad && loopVideos.length > 0) {
+    // Unified handler for content end
+    const handleContentEnded = () => {
+        console.log('>>> [AdDisplay] Content Ended. isAd:', !!ad);
+        if (ad) {
+            console.log('>>> [AdDisplay] Ad Ended:', ad.campaign);
+            if (onAdEnded) onAdEnded();
+        } else if (loopVideos.length > 0) {
+            console.log(`>>> [AdDisplay] Loop Video Ended: ${currentLoopIndex + 1}/${loopVideos.length}`);
             setIsTransitioning(true);
+
+            if (currentLoopIndex === loopVideos.length - 1) {
+                console.log(`>>> [AdDisplay] FULL LOOP CYCLE COMPLETE`);
+                if (onLoopCycleComplete) onLoopCycleComplete();
+            }
+
             setTimeout(() => {
-                setCurrentLoopIndex((prevIndex) => (prevIndex + 1) % loopVideos.length);
+                const nextIndex = (currentLoopIndex + 1) % loopVideos.length;
+                console.log(`>>> [AdDisplay] Moving to next video index: ${nextIndex}`);
+                setCurrentLoopIndex(nextIndex);
                 setIsTransitioning(false);
-            }, 300); // Short transition delay
+
+                // Force replay if we're cycling back to the same video (single video loop)
+                if (nextIndex === currentLoopIndex && videoRef.current) {
+                    console.log('>>> [AdDisplay] Same index - forcing video replay');
+                    videoRef.current.currentTime = 0;
+                    videoRef.current.play().catch(err => {
+                        console.warn('>>> [AdDisplay] Forced replay failed:', err);
+                    });
+                }
+            }, 300);
         }
     };
 
-    // When ad becomes null (exiting zone), advance to next video
+    // Handle Image Ad Duration
     useEffect(() => {
-        const wasShowingAd = previousAdRef.current !== null;
-        const isNowShowingLoop = ad === null;
+        if (ad && ad.type === 'image') {
+            const duration = (ad.duration || 10) * 1000;
+            console.log(`>>> [AdDisplay] Image ad detected. Setting timer for ${duration}ms`);
 
-        if (wasShowingAd && isNowShowingLoop && loopVideos.length > 0) {
-            // Exited zone - advance to next video in loop
-            setCurrentLoopIndex((prevIndex) => (prevIndex + 1) % loopVideos.length);
+            if (imageTimerRef.current) clearTimeout(imageTimerRef.current);
+
+            imageTimerRef.current = setTimeout(() => {
+                console.log('>>> [AdDisplay] Image ad duration reached');
+                handleContentEnded();
+            }, duration);
         }
+        return () => {
+            if (imageTimerRef.current) clearTimeout(imageTimerRef.current);
+        };
+    }, [ad?.id, ad?.type]);
 
-        previousAdRef.current = ad;
-    }, [ad, loopVideos.length]);
+    // Determine what to show
+    const activeVideo = ad || (loopVideos.length > 0 ? loopVideos[currentLoopIndex] : null);
 
-    // Reset video when source changes
+    // Force play when active video changes
     useEffect(() => {
-        if (videoRef.current) {
-            videoRef.current.load();
+        if (activeVideo && activeVideo.url && (ad?.type !== 'image')) {
+            if (videoRef.current) {
+                console.log('>>> [AdDisplay] Playing video:', activeVideo.url);
+                videoRef.current.load();
+                videoRef.current.play().catch(err => {
+                    console.warn('>>> [AdDisplay] Playback failed:', err);
+                });
+            }
         }
-    }, [currentLoopIndex, ad]);
+    }, [activeVideo?.url, ad?.id]);
 
-    // If showing zone-based ad
-    if (ad) {
-        return (
-            <div className="ad-display">
-                {ad.type === 'video' ? (
-                    <video
-                        ref={videoRef}
-                        src={ad.url}
-                        autoPlay
-                        loop
-                        muted
-                        className="ad-content"
-                    />
-                ) : (
-                    <img src={ad.url} alt="Ad" className="ad-content" />
-                )}
+    // Reset loop index if loopVideos changes
+    useEffect(() => {
+        console.log(`>>> [AdDisplay] loopVideos changed. Count: ${loopVideos.length}, currentIndex: ${currentLoopIndex}`);
+        if (loopVideos.length > 0 && currentLoopIndex >= loopVideos.length) {
+            console.log(`>>> [AdDisplay] Resetting index to 0 (was ${currentLoopIndex})`);
+            setCurrentLoopIndex(0);
+        } else if (loopVideos.length === 0) {
+            console.warn('>>> [AdDisplay] No loop videos available!');
+        }
+    }, [loopVideos.length]);
 
-                {/* QR Code Section - Top Right */}
-                {ad.targetUrl && (
-                    <div style={{
-                        position: 'absolute',
-                        top: '20px',
-                        right: '20px',
-                        background: 'white',
-                        padding: '10px',
-                        borderRadius: '10px',
-                        zIndex: 20,
-                        boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
-                    }}>
-                        <QRCode value={ad.targetUrl} size={108} />
-                        <p style={{ color: 'black', fontSize: '12px', margin: '5px 0 0 0', textAlign: 'center', fontWeight: 'bold' }}>Escanear info</p>
+    const renderMetadataCard = (data) => (
+        <div className="unified-card-overlay">
+            <div className="unified-card">
+                <div className="card-section-location">
+                    <div className="location-icon">🏢</div>
+                    <div className="location-text">
+                        <span className="location-label">{addressLabel}</span>
+                        <h2 className="location-name">
+                            {data.businessName || address || "Socio Comercial"}
+                        </h2>
+                    </div>
+                </div>
+
+                {data.phoneNumber && (
+                    <div className="card-section-ad">
+                        <p className="ad-description">📞 {data.phoneNumber}</p>
                     </div>
                 )}
-
-                <div className="ad-overlay">
-                    <h3 className="ad-title">{ad.campaign}</h3>
-                    <p>¡Oferta especial para ti!</p>
-                    <div className="ad-cta">Ver detalles</div>
-                </div>
             </div>
-        );
-    }
+        </div>
+    );
 
-    // If showing video loop
-    if (loopVideos.length > 0) {
-        const currentVideo = loopVideos[currentLoopIndex];
-        return (
-            <div
-                className="ad-display"
-                style={{
-                    opacity: isTransitioning ? 0.7 : 1,
-                    transition: 'opacity 0.3s ease-in-out'
-                }}
-            >
-                <video
-                    ref={videoRef}
-                    src={currentVideo}
-                    autoPlay
-                    muted
-                    className="ad-content"
-                    onEnded={handleVideoEnded}
-                    key={currentVideo} // Force re-render on video change
-                />
-
-                {/* Optional: Show loop indicator */}
-                <div style={{
-                    position: 'absolute',
-                    bottom: '80px',
-                    left: '20px',
-                    background: 'rgba(0,0,0,0.6)',
-                    color: 'white',
-                    padding: '8px 12px',
-                    borderRadius: '5px',
-                    fontSize: '14px',
-                    zIndex: 10
-                }}>
-                    Video {currentLoopIndex + 1} / {loopVideos.length}
-                </div>
-            </div>
-        );
-    }
-
-    // No ad and no loop videos - show default message
     return (
-        <div className="ad-display" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-            <h2 style={{ color: '#475569' }}>Waiting for opportunities...</h2>
+        <div className="ad-display" style={{
+            opacity: isTransitioning ? 0.7 : 1,
+            transition: 'opacity 0.3s ease-in-out',
+            backgroundColor: '#000',
+            width: '100%',
+            height: '100%',
+            overflow: 'hidden',
+            position: 'relative'
+        }}>
+            {activeVideo ? (
+                <>
+                    {ad?.type === 'image' ? (
+                        <div className="ad-content-image-wrapper" style={{ width: '100%', height: '100%' }}>
+                            <img
+                                src={activeVideo.url}
+                                alt={ad.campaign}
+                                className="ad-content"
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                        </div>
+                    ) : (
+                        <video
+                            key={activeVideo.url}
+                            ref={videoRef}
+                            src={activeVideo.url}
+                            autoPlay
+                            playsInline
+                            className="ad-content"
+                            onEnded={handleContentEnded}
+                        />
+                    )}
+
+                    {/* Top Left Business Logo */}
+                    {activeVideo.logoUrl && (
+                        <div className="business-logo-overlay">
+                            <img src={activeVideo.logoUrl} alt="Business Logo" />
+                        </div>
+                    )}
+
+                    {/* Marquee Section */}
+                    {activeVideo.description && (
+                        <div className="marquee-overlay">
+                            <div className="marquee-content">
+                                <span className="marquee-text-fun">{activeVideo.description}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* QR Code Section */}
+                    {activeVideo.targetUrl && (
+                        <div className="status-container-right">
+                            <div className="qr-container">
+                                <QRCode
+                                    value={activeVideo.targetUrl}
+                                    size={Math.min(window.innerWidth * 0.12, 80)}
+                                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                                />
+                                <p className="qr-label">
+                                    {ad ? "Escanear info" : "Contacto QR"}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Overlay Section */}
+                    {ad ? (
+                        <div className="unified-card-overlay">
+                            <div className="unified-card">
+                                <div className="card-section-location">
+                                    <div className="location-icon">📍</div>
+                                    <div className="location-text">
+                                        <span className="location-label">{addressLabel}</span>
+                                        <h2 className="location-name">
+                                            {addressLoading ? "Cargando..." : (address || "Ubicación")}
+                                        </h2>
+                                    </div>
+                                </div>
+                                <div className="card-section-ad">
+                                    <h3 className="ad-title">{ad.campaign}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        renderMetadataCard(activeVideo)
+                    )}
+                </>
+            ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#000' }}>
+                    <h2 style={{ color: '#475569' }}>Waiting for opportunities...</h2>
+                </div>
+            )}
         </div>
     );
 };
