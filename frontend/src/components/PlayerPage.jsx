@@ -5,6 +5,17 @@ import { detectLanguageFromAddress } from '../utils/languageDetector';
 import AdDisplay from './AdDisplay';
 import InfoBar from './InfoBar';
 
+// Generate or retrieve a persistent screen ID
+const getScreenId = () => {
+    let id = localStorage.getItem('cc_screen_id');
+    if (!id) {
+        id = 'screen_' + Math.random().toString(36).substring(2, 10);
+        localStorage.setItem('cc_screen_id', id);
+    }
+    return id;
+};
+const SCREEN_ID = getScreenId();
+
 const PlayerPage = () => {
     const { t, i18n } = useTranslation();
     const [position, setPosition] = useState({ lat: 0, lng: 0 });
@@ -64,7 +75,7 @@ const PlayerPage = () => {
 
                 setAddress(buildingName || 'Unknown Location');
 
-                const city = addr.city || addr.town || addr.village || addr.county || '';
+                const city = addr.suburb || addr.neighbourhood || addr.city_district || addr.city || addr.town || addr.village || '';
                 const state = addr.state || '';
                 setCityState(`${city}${city && state ? ', ' : ''}${state}`);
             }
@@ -148,32 +159,29 @@ const PlayerPage = () => {
 
                 // Log each video for debugging
                 response.data.loopVideos.forEach((video, index) => {
-                    console.log(`>>> [PlayerPage] Video ${index + 1}: ${video.businessName} - ${video.url}`);
+                    console.log(`>>> [PlayerPage] Video ${index + 1}: ${video.businessName || 'Unnamed'} - ${video.url}`);
                 });
             } else if (response.data.loopVideos) {
-                console.log(`>>> [PlayerPage] Loop videos unchanged (${response.data.loopVideos.length} videos)`);
+                // Occasional log for health check
+                if (Math.random() > 0.9) {
+                    console.log(`>>> [PlayerPage] Loop videos steady (${response.data.loopVideos.length} videos)`);
+                }
             } else {
                 console.warn('>>> [PlayerPage] No loop videos received from backend!');
             }
 
-            if (response.data.action === 'play') {
-                const newAd = response.data.ad;
-                const isAlreadyPlayed = lastPlayedAdId === newAd.id;
-                const isSameAsCurrent = currentAd && currentAd.id === newAd.id;
-
-                if (!isAlreadyPlayed && !isSameAsCurrent) {
-                    console.log(`>>> [TRANSITION] Triggering ad: ${newAd.campaign}`);
-                    addLog(`Ad detectado: ${newAd.campaign}`);
-                    setCurrentAd(newAd);
+            if (response.data.action === 'play' && response.data.ad) {
+                const adData = response.data.ad;
+                if ((!currentAd || currentAd.id !== adData.id) && adData.id !== lastPlayedAdId) {
+                    console.log('>>> [TRANSITION] Triggering Ad Play:', adData.campaign);
+                    setCurrentAd(adData);
+                    addLog(`Anuncio detectado: ${response.data.ad.campaign}`);
                 }
             } else if (response.data.action === 'loop') {
                 if (currentAd) {
-                    console.log('>>> [TRANSITION] Exited ad zone');
+                    console.log('>>> [TRANSITION] Returning to loop-only mode');
                     setCurrentAd(null);
-                    addLog('Saliendo de zona de anuncio. Volviendo al bucle.');
-                }
-                if (lastPlayedAdId !== null) {
-                    setLastPlayedAdId(null);
+                    addLog('Volviendo al bucle de videos públicos.');
                 }
             }
         } catch (error) {
@@ -260,6 +268,10 @@ const PlayerPage = () => {
                 addressLabel={currentAd ? t('playerPage.nearbyBusiness') : t('playerPage.currentLocation')}
                 onAdEnded={handleAdEnded}
                 onLoopCycleComplete={handleLoopCycleComplete}
+                userLocation={position}
+                screenId={SCREEN_ID}
+                currentLanguage={i18n.language}
+                currentWeather={weatherData.condition}
             />
             <InfoBar weatherData={weatherData} />
 

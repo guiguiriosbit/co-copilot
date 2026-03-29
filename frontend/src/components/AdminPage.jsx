@@ -1,5 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { MapContainer, TileLayer, Marker, Circle, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix Leaflet marker icon issue
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
+
+const LocationPicker = ({ lat, lng, onLocationSelect }) => {
+    useMapEvents({
+        click(e) {
+            onLocationSelect(e.latlng.lat, e.latlng.lng);
+        },
+    });
+    return lat && lng ? <Marker position={[lat, lng]} /> : null;
+};
 
 const AdminPage = ({ onBack }) => {
     const [activeTab, setActiveTab] = useState('businesses'); // 'businesses' or 'videoloop'
@@ -8,7 +28,13 @@ const AdminPage = ({ onBack }) => {
         videoUrl: '',
         targetUrl: '',
         lat: '',
-        lng: ''
+        email: '',
+        radiusKm: 0.1,       // default 100m
+        scheduleStart: '',   // HH:MM or empty
+        scheduleEnd: '',
+        adType: 'video',     // 'video' or 'image'
+        duration: 30,         // seconds
+        sourceType: 'file'
     });
     const [businesses, setBusinesses] = useState([]);
     const [editingId, setEditingId] = useState(null);
@@ -26,14 +52,35 @@ const AdminPage = ({ onBack }) => {
         phoneNumber: '',
         description: '',
         lat: '',
-        lng: ''
+        lng: '',
+        address: '',
+        email: '',
+        sourceType: 'file',
+        streamUrl: '',
+        duration: 0
     });
     const [logoFile, setLogoFile] = useState(null);
     const [editingLoopFilename, setEditingLoopFilename] = useState(null);
 
+    // Trivia state
+    const [trivias, setTrivias] = useState([]);
+    const [triviaForm, setTriviaForm] = useState({ question: '', answer: '', category: 'General', duration: 15, language: 'es' });
+    const [editingTriviaId, setEditingTriviaId] = useState(null);
+
+    // RSS state
+    const [rssUrl, setRssUrl] = useState('');
+    const [rssMessage, setRssMessage] = useState('');
+
+    // Polls state
+    const [polls, setPolls] = useState([]);
+    const [pollForm, setPollForm] = useState({ question: '', options: '', category: 'General', language: 'es' });
+    const [editingPollId, setEditingPollId] = useState(null);
+
     useEffect(() => {
         fetchBusinesses();
         fetchLoopVideos();
+        fetchTrivias();
+        fetchPolls();
     }, []);
 
     const fetchBusinesses = async () => {
@@ -54,6 +101,61 @@ const AdminPage = ({ onBack }) => {
         }
     };
 
+    const fetchTrivias = async () => {
+        try {
+            const response = await axios.get('/api/admin/trivias');
+            setTrivias(response.data);
+        } catch (error) {
+            console.error('Error fetching trivias:', error);
+        }
+    };
+
+    const fetchPolls = async () => {
+        try {
+            const response = await axios.get('/api/admin/polls');
+            setPolls(response.data);
+        } catch (error) {
+            console.error('Error fetching polls:', error);
+        }
+    };
+
+    const handleRssSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await axios.post('/api/admin/settings/rss', { url: rssUrl });
+            setRssMessage('Configuración RSS actualizada correctamente');
+            setTimeout(() => setRssMessage(''), 3000);
+        } catch (error) {
+            setRssMessage('Error actualizando RSS');
+        }
+    };
+
+    const handleTriviaSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            if (editingTriviaId) {
+                await axios.put(`/api/admin/trivia/${editingTriviaId}`, triviaForm);
+            } else {
+                await axios.post('/api/admin/trivia', triviaForm);
+            }
+            setTriviaForm({ question: '', answer: '', category: 'General', duration: 15 });
+            setEditingTriviaId(null);
+            fetchTrivias();
+        } catch (error) {
+            console.error('Error saving trivia:', error);
+        }
+    };
+
+    const deleteTrivia = async (id) => {
+        if (!window.confirm('¿Eliminar esta trivia?')) return;
+        try {
+            await axios.delete(`/api/admin/trivia/${id}`);
+            fetchTrivias();
+        } catch (error) {
+            console.error('Error deleting trivia:', error);
+        }
+    };
+
     const handleBusinessSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -68,7 +170,7 @@ const AdminPage = ({ onBack }) => {
                 setMessage('Negocio creado con éxito!');
             }
 
-            setFormData({ name: '', videoUrl: '', targetUrl: '', lat: '', lng: '' });
+            setFormData({ name: '', videoUrl: '', targetUrl: '', lat: '', lng: '', phoneNumber: '', address: '', email: '', radiusKm: 0.1, scheduleStart: '', scheduleEnd: '', adType: 'video', duration: 30, sourceType: 'file' });
             setEditingId(null);
             fetchBusinesses();
         } catch (error) {
@@ -150,6 +252,11 @@ const AdminPage = ({ onBack }) => {
             fd.append('description', loopMetadata.description);
             fd.append('lat', loopMetadata.lat);
             fd.append('lng', loopMetadata.lng);
+            if (loopMetadata.address) fd.append('address', loopMetadata.address);
+            if (loopMetadata.email) fd.append('email', loopMetadata.email);
+            fd.append('sourceType', loopMetadata.sourceType);
+            if (loopMetadata.streamUrl) fd.append('streamUrl', loopMetadata.streamUrl);
+            if (loopMetadata.duration) fd.append('duration', loopMetadata.duration);
             if (logoFile) fd.append('logo', logoFile);
 
             if (isNewUpload) {
@@ -173,7 +280,7 @@ const AdminPage = ({ onBack }) => {
 
             // Reset
             setEditingLoopFilename(null);
-            setLoopMetadata({ businessName: '', targetUrl: '', phoneNumber: '', description: '', lat: '', lng: '' });
+            setLoopMetadata({ businessName: '', targetUrl: '', phoneNumber: '', description: '', lat: '', lng: '', address: '', email: '', sourceType: 'file', streamUrl: '', duration: 0 });
             setLogoFile(null);
             fetchLoopVideos();
         } catch (error) {
@@ -290,9 +397,9 @@ const AdminPage = ({ onBack }) => {
         borderRadius: '12px',
         fontSize: '11px',
         fontWeight: '700',
-        background: status === 'active' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-        color: status === 'active' ? '#4ade80' : '#f87171',
-        border: `1px solid ${status === 'active' ? '#22c55e' : '#ef4444'}`
+        background: status === 'active' || status === 'source' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+        color: status === 'active' || status === 'source' ? '#4ade80' : '#f87171',
+        border: `1px solid ${status === 'active' || status === 'source' ? '#22c55e' : '#ef4444'}`
     });
 
     return (
@@ -316,6 +423,12 @@ const AdminPage = ({ onBack }) => {
                 >
                     🎬 Loop de Video
                 </button>
+                <button
+                    style={menuButtonStyle(activeTab === 'trivia')}
+                    onClick={() => { setActiveTab('trivia'); setEditingTriviaId(null); }}
+                >
+                    💡 Entretenimiento
+                </button>
 
                 <div style={{ marginTop: 'auto', borderTop: '1px solid #334155', paddingTop: '20px' }}>
                     <button onClick={onBack} style={{ ...menuButtonStyle(false), width: '100%', color: '#f87171' }}>
@@ -333,7 +446,7 @@ const AdminPage = ({ onBack }) => {
                             <button
                                 onClick={() => {
                                     setEditingId(editingId === 'new' ? null : 'new');
-                                    setFormData({ name: '', videoUrl: '', targetUrl: '', lat: '', lng: '' });
+                                    setFormData({ name: '', videoUrl: '', sourceType: 'file', targetUrl: '', lat: '', lng: '', radiusKm: 0.1, scheduleStart: '', scheduleEnd: '', adType: 'video', duration: 30 });
                                 }}
                                 style={{
                                     padding: '10px 20px',
@@ -352,49 +465,216 @@ const AdminPage = ({ onBack }) => {
                         {editingId && (
                             <div style={cardStyle}>
                                 <h3>{editingId === 'new' ? 'Crear Nuevo Negocio' : 'Editar Negocio'}</h3>
-                                <form onSubmit={handleBusinessSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                                    <input
-                                        placeholder="Nombre del Negocio"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        required
-                                        style={{ padding: '12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff' }}
-                                    />
-                                    <input
-                                        placeholder="URL del Video (mp4)"
-                                        value={formData.videoUrl}
-                                        onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
-                                        required
-                                        style={{ padding: '12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff' }}
-                                    />
-                                    <input
-                                        placeholder="URL de Destino (QR)"
-                                        value={formData.targetUrl}
-                                        onChange={(e) => setFormData({ ...formData, targetUrl: e.target.value })}
-                                        style={{ padding: '12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff' }}
-                                    />
-                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                <form onSubmit={handleBusinessSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                                    <div className="form-section-title">Información Básica</div>
+                                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                        <label className="form-label">Nombre del Negocio</label>
                                         <input
-                                            placeholder="Latitud"
-                                            value={formData.lat}
-                                            onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
-                                            style={{ flex: 1, padding: '12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff' }}
+                                            className="admin-input"
+                                            placeholder="Ej: Restaurante La Parrilla"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            required
                                         />
-                                        <input
-                                            placeholder="Longitud"
-                                            value={formData.lng}
-                                            onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
-                                            style={{ flex: 1, padding: '12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff' }}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => getCurrentLocation('business')}
-                                            style={{ padding: '0 15px', background: '#334155', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}
-                                        >📍</button>
                                     </div>
-                                    <div style={{ gridColumn: 'span 2', display: 'flex', gap: '10px' }}>
-                                        <button type="submit" style={{ flex: 1, padding: '12px', background: '#22c55e', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: '700' }}>
-                                            {loading ? 'Guardando...' : '💾 Guardar Negocio'}
+                                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                        <label className="form-label">Tipo de Origen</label>
+                                        <select
+                                            className="admin-input"
+                                            value={formData.sourceType}
+                                            onChange={(e) => setFormData({ ...formData, sourceType: e.target.value })}
+                                            style={{ backgroundColor: '#0f172a', color: 'white' }}
+                                        >
+                                            <option value="file">📁 Archivo Local/URL Directa</option>
+                                            <option value="youtube">🎬 YouTube (Link/ID)</option>
+                                            <option value="hls">🌐 Streaming En Vivo (HLS)</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">{formData.sourceType === 'file' ? 'URL del Contenido (mp4/jpg/png)' : 'URL del Streaming'}</label>
+                                        <input
+                                            className="admin-input"
+                                            placeholder="https://..."
+                                            value={formData.videoUrl}
+                                            onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">URL de Destino (QR)</label>
+                                        <input
+                                            className="admin-input"
+                                            placeholder="Link de menú o contacto"
+                                            value={formData.targetUrl}
+                                            onChange={(e) => setFormData({ ...formData, targetUrl: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="form-section-title">Información de Contacto</div>
+                                    <div className="form-group">
+                                        <label className="form-label">WhatsApp / Teléfono</label>
+                                        <input
+                                            className="admin-input"
+                                            placeholder="+57300..."
+                                            value={formData.phoneNumber}
+                                            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Email de Contacto</label>
+                                        <input
+                                            className="admin-input"
+                                            type="email"
+                                            placeholder="contacto@negocio.com"
+                                            value={formData.email}
+                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                        <label className="form-label">Dirección Física</label>
+                                        <input
+                                            className="admin-input"
+                                            placeholder="Calle 123 #45-67"
+                                            value={formData.address}
+                                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="form-section-title">📍 Zona de Activación</div>
+                                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                        <label className="form-label">Coordenadas (Lat / Lng)</label>
+                                        <div style={{ display: 'flex', gap: '10px' }}>
+                                            <input
+                                                className="admin-input"
+                                                placeholder="Latitud"
+                                                value={formData.lat}
+                                                onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
+                                                style={{ flex: 1 }}
+                                            />
+                                            <input
+                                                className="admin-input"
+                                                placeholder="Longitud"
+                                                value={formData.lng}
+                                                onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
+                                                style={{ flex: 1 }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => getCurrentLocation('business')}
+                                                style={{ padding: '0 20px', background: '#334155', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontSize: '1.2rem' }}
+                                            >📍</button>
+                                        </div>
+                                    </div>
+
+                                    {/* Mapa Interactivo */}
+                                    <div className="form-group" style={{ gridColumn: 'span 2', height: '300px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #334155', marginBottom: '15px' }}>
+                                        <MapContainer
+                                            center={formData.lat && formData.lng ? [formData.lat, formData.lng] : [-34.6037, -58.3816]}
+                                            zoom={13}
+                                            style={{ height: '100%', width: '100%' }}
+                                        >
+                                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                            <LocationPicker
+                                                lat={formData.lat}
+                                                lng={formData.lng}
+                                                onLocationSelect={(lat, lng) => setFormData(prev => ({ ...prev, lat, lng }))}
+                                            />
+                                            {formData.lat && formData.lng && (
+                                                <Circle
+                                                    center={[formData.lat, formData.lng]}
+                                                    radius={formData.radiusKm * 1000}
+                                                    pathOptions={{ color: '#38bdf8', fillColor: '#38bdf8', fillOpacity: 0.2 }}
+                                                />
+                                            )}
+                                        </MapContainer>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', textAlign: 'center' }}>
+                                            🖱️ Haz clic en el mapa para posicionar el negocio
+                                        </div>
+                                    </div>
+
+                                    {/* Radio configurble */}
+                                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                        <label className="form-label">
+                                            📡 Radio de GeoFence: <strong style={{ color: '#38bdf8' }}>{formData.radiusKm >= 1 ? `${formData.radiusKm} km` : `${Math.round(formData.radiusKm * 1000)} m`}</strong>
+                                        </label>
+                                        <input
+                                            type="range"
+                                            min="0.05"
+                                            max="5"
+                                            step="0.05"
+                                            value={formData.radiusKm}
+                                            onChange={(e) => setFormData({ ...formData, radiusKm: parseFloat(e.target.value) })}
+                                            style={{ width: '100%', accentColor: '#38bdf8', marginTop: '6px' }}
+                                        />
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748b' }}>
+                                            <span>50m</span><span>500m</span><span>1km</span><span>2.5km</span><span>5km</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Horario activo */}
+                                    <div className="form-section-title">🕐 Horario de Campaña (Opcional)</div>
+                                    <div className="form-group">
+                                        <label className="form-label">Inicio (HH:MM, 24h)</label>
+                                        <input
+                                            type="time"
+                                            className="admin-input"
+                                            value={formData.scheduleStart}
+                                            onChange={(e) => setFormData({ ...formData, scheduleStart: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Fin (HH:MM, 24h)</label>
+                                        <input
+                                            type="time"
+                                            className="admin-input"
+                                            value={formData.scheduleEnd}
+                                            onChange={(e) => setFormData({ ...formData, scheduleEnd: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-section-title">🎬 Configuración del Anuncio</div>
+                                    <div className="form-group">
+                                        <label className="form-label">Tipo de Contenido</label>
+                                        <select
+                                            className="admin-input"
+                                            value={formData.adType}
+                                            onChange={(e) => setFormData({ ...formData, adType: e.target.value })}
+                                            style={{ backgroundColor: '#0f172a', color: 'white' }}
+                                        >
+                                            <option value="video">Video (MP4)</option>
+                                            <option value="image">Imagen (JPG/PNG)</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Duración (segundos)</label>
+                                        <input
+                                            type="number"
+                                            className="admin-input"
+                                            value={formData.duration}
+                                            onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                                            min="3"
+                                            max="300"
+                                        />
+                                    </div>
+
+                                    <div style={{ gridColumn: 'span 2', display: 'flex', gap: '15px', marginTop: '20px' }}>
+                                        <button
+                                            type="submit"
+                                            style={{
+                                                flex: 1,
+                                                padding: '15px',
+                                                background: '#22c55e',
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                color: '#fff',
+                                                fontWeight: '800',
+                                                fontSize: '1.1rem',
+                                                cursor: 'pointer',
+                                                transition: 'transform 0.2s ease'
+                                            }}
+                                            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+                                            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                        >
+                                            {loading ? '⌛ Guardando...' : '💾 Guardar Negocio'}
                                         </button>
                                     </div>
                                 </form>
@@ -407,8 +687,9 @@ const AdminPage = ({ onBack }) => {
                                     <tr>
                                         <th style={thStyle}>Nombre / Cliente</th>
                                         <th style={thStyle}>Estado</th>
-                                        <th style={thStyle}>Video URL</th>
-                                        <th style={thStyle}>QR URL</th>
+                                        <th style={thStyle}>GeoFencing</th>
+                                        <th style={thStyle}>Horario / Tipo</th>
+                                        <th style={thStyle}>Contenido</th>
                                         <th style={thStyle}>Acciones</th>
                                     </tr>
                                 </thead>
@@ -421,6 +702,37 @@ const AdminPage = ({ onBack }) => {
                                             </td>
                                             <td style={tdStyle}>
                                                 <span style={statusBadge(b.status)}>{b.status}</span>
+                                            </td>
+                                            <td style={tdStyle}>
+                                                <div style={{ fontSize: '13px' }}>
+                                                    {b.radiusKm >= 1 ? `${b.radiusKm} km` : `${Math.round((b.radiusKm || 0.1) * 1000)} m`}
+                                                </div>
+                                                {b.Ads?.[0]?.GeoZones?.[0]?.polygon?.coordinates ? (
+                                                    <div style={{ fontSize: '11px', color: '#64748b' }}>📍 Geolocalizado</div>
+                                                ) : (
+                                                    <div style={{ fontSize: '11px', color: '#f87171' }}>⚠️ Sin zona</div>
+                                                )}
+                                            </td>
+                                            <td style={tdStyle}>
+                                                {b.scheduleStart && b.scheduleEnd ? (
+                                                    <div style={{ fontSize: '13px', color: '#38bdf8' }}>
+                                                        🕒 {b.scheduleStart} - {b.scheduleEnd}
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ fontSize: '12px', color: '#64748b' }}>24/7</div>
+                                                )}
+                                                <div style={{ fontSize: '11px', marginTop: '4px' }}>
+                                                    <span style={{
+                                                        background: b.Ads?.[0]?.type === 'image' ? '#78350f' : '#1e1b4b',
+                                                        color: b.Ads?.[0]?.type === 'image' ? '#fbbf24' : '#818cf8',
+                                                        padding: '2px 6px',
+                                                        borderRadius: '4px',
+                                                        textTransform: 'uppercase',
+                                                        fontWeight: 'bold'
+                                                    }}>
+                                                        {b.Ads?.[0]?.type || 'video'} ({b.Ads?.[0]?.duration || 30}s)
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td style={tdStyle}>
                                                 {b.Ads?.[0]?.url ? (
@@ -481,7 +793,15 @@ const AdminPage = ({ onBack }) => {
                                                                 videoUrl: ad?.url || '',
                                                                 targetUrl: ad?.targetUrl || '',
                                                                 lat: '',
-                                                                lng: ''
+                                                                lng: '',
+                                                                phoneNumber: b.phoneNumber || '',
+                                                                address: b.address || '',
+                                                                email: b.email || '',
+                                                                radiusKm: b.radiusKm || 0.1,
+                                                                scheduleStart: b.scheduleStart || '',
+                                                                scheduleEnd: b.scheduleEnd || '',
+                                                                adType: ad?.type || 'video',
+                                                                duration: ad?.duration || 30
                                                             });
                                                         }}
                                                         style={actionButtonStyle('#eab308')}
@@ -513,7 +833,9 @@ const AdminPage = ({ onBack }) => {
                             <button
                                 onClick={() => {
                                     setEditingLoopFilename(editingLoopFilename === 'new' ? null : 'new');
-                                    setLoopMetadata({ businessName: '', targetUrl: '', phoneNumber: '', description: '' });
+                                    setLoopMetadata({ businessName: '', targetUrl: '', phoneNumber: '', description: '', lat: '', lng: '', address: '', email: '', sourceType: 'file', streamUrl: '', duration: 0 });
+                                    setLogoFile(null);
+                                    setSelectedFile(null);
                                 }}
                                 style={{
                                     padding: '10px 20px',
@@ -532,70 +854,167 @@ const AdminPage = ({ onBack }) => {
                         {editingLoopFilename && (
                             <div style={cardStyle}>
                                 <h3>{editingLoopFilename === 'new' ? 'Subir Nuevo Video al Loop' : `Editar: ${editingLoopFilename}`}</h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                                    <div className="form-section-title">Contenido Visual</div>
                                     {editingLoopFilename === 'new' && (
-                                        <div style={{ gridColumn: 'span 2' }}>
+                                        <div style={{ gridColumn: 'span 2' }} className="form-group">
+                                            <label className="form-label">Tipo de Origen</label>
+                                            <select
+                                                className="admin-input"
+                                                value={loopMetadata.sourceType}
+                                                onChange={(e) => setLoopMetadata({ ...loopMetadata, sourceType: e.target.value })}
+                                                style={{ backgroundColor: '#0f172a', color: 'white' }}
+                                            >
+                                                <option value="file">📁 Archivo Local (MP4)</option>
+                                                <option value="youtube">🎬 YouTube (Link/ID)</option>
+                                                <option value="hls">🌐 Streaming En Vivo (HLS/m3u8)</option>
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    {editingLoopFilename === 'new' && loopMetadata.sourceType === 'file' && (
+                                        <div style={{ gridColumn: 'span 1' }} className="form-group">
+                                            <label className="form-label">Archivo de Video</label>
                                             <input
                                                 type="file"
                                                 accept="video/*"
+                                                className="admin-input"
                                                 onChange={(e) => setSelectedFile(e.target.files[0])}
-                                                style={{ padding: '12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff', width: '100%' }}
                                             />
                                             {selectedFile && (
-                                                <p style={{ fontSize: '12px', color: '#38bdf8', marginTop: '8px' }}>
+                                                <p style={{ fontSize: '12px', color: '#38bdf8', marginTop: '4px' }}>
                                                     📹 {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
                                                 </p>
                                             )}
                                         </div>
                                     )}
-                                    <input
-                                        placeholder="Nombre del Negocio / Campaña"
-                                        value={loopMetadata.businessName}
-                                        onChange={(e) => setLoopMetadata({ ...loopMetadata, businessName: e.target.value })}
-                                        style={{ padding: '12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff' }}
-                                    />
-                                    <input
-                                        placeholder="WhatsApp (con código)"
-                                        value={loopMetadata.phoneNumber}
-                                        onChange={(e) => setLoopMetadata({ ...loopMetadata, phoneNumber: e.target.value })}
-                                        style={{ padding: '12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff' }}
-                                    />
-                                    <input
-                                        placeholder="URL de QR / Menú"
-                                        value={loopMetadata.targetUrl}
-                                        onChange={(e) => setLoopMetadata({ ...loopMetadata, targetUrl: e.target.value })}
-                                        style={{ padding: '12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff' }}
-                                    />
-                                    <div style={{ display: 'flex', gap: '10px', gridColumn: 'span 2' }}>
+
+                                    {editingLoopFilename === 'new' && loopMetadata.sourceType !== 'file' && (
+                                        <div style={{ gridColumn: 'span 1' }} className="form-group">
+                                            <label className="form-label">URL del Streaming / Video</label>
+                                            <input
+                                                className="admin-input"
+                                                placeholder={loopMetadata.sourceType === 'youtube' ? 'Ej: https://youtube.com/watch?v=...' : 'Ej: https://dominio.com/streaming.m3u8'}
+                                                value={loopMetadata.streamUrl}
+                                                onChange={(e) => setLoopMetadata({ ...loopMetadata, streamUrl: e.target.value })}
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div className="form-group" style={{ gridColumn: 'span 1' }}>
+                                        <label className="form-label">Duración Máxima (segundos, 0 = auto)</label>
                                         <input
-                                            placeholder="Latitud"
-                                            value={loopMetadata.lat}
-                                            onChange={(e) => setLoopMetadata({ ...loopMetadata, lat: e.target.value })}
-                                            style={{ flex: 1, padding: '12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff' }}
+                                            type="number"
+                                            className="admin-input"
+                                            placeholder="0"
+                                            value={loopMetadata.duration}
+                                            onChange={(e) => setLoopMetadata({ ...loopMetadata, duration: e.target.value })}
                                         />
-                                        <input
-                                            placeholder="Longitud"
-                                            value={loopMetadata.lng}
-                                            onChange={(e) => setLoopMetadata({ ...loopMetadata, lng: e.target.value })}
-                                            style={{ flex: 1, padding: '12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff' }}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => getCurrentLocation('loop')}
-                                            style={{ padding: '0 15px', background: '#334155', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}
-                                        >📍</button>
+                                        <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                                            Útil para rotar canales de streaming largos.
+                                        </p>
                                     </div>
-                                    <textarea
-                                        placeholder="Descripción (Marquee)"
-                                        value={loopMetadata.description}
-                                        onChange={(e) => setLoopMetadata({ ...loopMetadata, description: e.target.value })}
-                                        style={{ padding: '12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff', gridColumn: 'span 2', minHeight: '80px' }}
-                                    />
+                                    <div className="form-group" style={{ gridColumn: editingLoopFilename === 'new' ? 'span 1' : 'span 2' }}>
+                                        <label className="form-label">Logo del Negocio</label>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="admin-input"
+                                            onChange={(e) => setLogoFile(e.target.files[0])}
+                                        />
+                                        {logoFile && <p style={{ fontSize: '12px', color: '#4ade80', marginTop: '4px' }}>✅ {logoFile.name}</p>}
+                                    </div>
+
+                                    <div className="form-section-title">Información del Negocio</div>
+                                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                        <label className="form-label">Nombre del Negocio / Campaña</label>
+                                        <input
+                                            className="admin-input"
+                                            placeholder="Ej: Oferta Especial Mayo"
+                                            value={loopMetadata.businessName}
+                                            onChange={(e) => setLoopMetadata({ ...loopMetadata, businessName: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">WhatsApp (con código)</label>
+                                        <input
+                                            className="admin-input"
+                                            placeholder="+57300..."
+                                            value={loopMetadata.phoneNumber}
+                                            onChange={(e) => setLoopMetadata({ ...loopMetadata, phoneNumber: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">URL de QR / Menú</label>
+                                        <input
+                                            className="admin-input"
+                                            placeholder="https://..."
+                                            value={loopMetadata.targetUrl}
+                                            onChange={(e) => setLoopMetadata({ ...loopMetadata, targetUrl: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Email de Contacto</label>
+                                        <input
+                                            className="admin-input"
+                                            type="email"
+                                            placeholder="contacto@negocio.com"
+                                            value={loopMetadata.email}
+                                            onChange={(e) => setLoopMetadata({ ...loopMetadata, email: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Dirección Física</label>
+                                        <input
+                                            className="admin-input"
+                                            placeholder="Calle 123 #45-67"
+                                            value={loopMetadata.address}
+                                            onChange={(e) => setLoopMetadata({ ...loopMetadata, address: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="form-section-title">Ubicación y Mensaje</div>
+                                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                        <label className="form-label">Asignar Ubicación (Lat / Lng)</label>
+                                        <div style={{ display: 'flex', gap: '10px' }}>
+                                            <input
+                                                className="admin-input"
+                                                placeholder="Latitud"
+                                                value={loopMetadata.lat}
+                                                onChange={(e) => setLoopMetadata({ ...loopMetadata, lat: e.target.value })}
+                                                style={{ flex: 1 }}
+                                            />
+                                            <input
+                                                className="admin-input"
+                                                placeholder="Longitud"
+                                                value={loopMetadata.lng}
+                                                onChange={(e) => setLoopMetadata({ ...loopMetadata, lng: e.target.value })}
+                                                style={{ flex: 1 }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => getCurrentLocation('loop')}
+                                                style={{ padding: '0 20px', background: '#334155', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontSize: '1.2rem' }}
+                                            >📍</button>
+                                        </div>
+                                    </div>
+                                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                        <label className="form-label">Descripción Publicitaria (Marquee)</label>
+                                        <textarea
+                                            className="admin-input"
+                                            placeholder="Mensaje que aparecerá rotando en pantalla"
+                                            value={loopMetadata.description}
+                                            onChange={(e) => setLoopMetadata({ ...loopMetadata, description: e.target.value })}
+                                            style={{ minHeight: '80px', resize: 'vertical' }}
+                                        />
+                                    </div>
                                     <button
                                         onClick={handleUploadVideo}
-                                        style={{ gridColumn: 'span 2', padding: '12px', background: '#22c55e', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: '700' }}
+                                        style={{ gridColumn: 'span 2', padding: '15px', background: '#22c55e', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: '800', marginTop: '10px', fontSize: '1.1rem', cursor: 'pointer', transition: 'transform 0.2s ease' }}
+                                        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+                                        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                                     >
-                                        {uploadingVideo ? 'Procesando...' : '📤 Guardar Cambios'}
+                                        {uploadingVideo ? '⌛ Procesando...' : '📤 Guardar Cambios'}
                                     </button>
                                 </div>
                                 {uploadMessage && <p style={{ color: '#4ade80', marginTop: '10px', textAlign: 'center' }}>{uploadMessage}</p>}
@@ -614,7 +1033,8 @@ const AdminPage = ({ onBack }) => {
                                             muted
                                             loop
                                         />
-                                        <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
+                                        <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '5px' }}>
+                                            <span style={statusBadge('source')}>{v.sourceType?.toUpperCase() || 'FILE'}</span>
                                             <span style={statusBadge(v.status)}>{v.status}</span>
                                         </div>
                                     </div>
@@ -631,8 +1051,14 @@ const AdminPage = ({ onBack }) => {
                                                     phoneNumber: v.phoneNumber,
                                                     description: v.description,
                                                     lat: v.lat || '',
-                                                    lng: v.lng || ''
+                                                    lng: v.lng || '',
+                                                    address: v.address || '',
+                                                    email: v.email || '',
+                                                    sourceType: v.sourceType || 'file',
+                                                    streamUrl: v.streamUrl || '',
+                                                    duration: v.duration || 0
                                                 });
+                                                setLogoFile(null);
                                             }}
                                             style={{ ...actionButtonStyle('#eab308'), flex: 1 }}
                                         >Editar</button>
@@ -652,8 +1078,273 @@ const AdminPage = ({ onBack }) => {
                         </div>
                     </div>
                 )}
+
+                {activeTab === 'trivia' && (
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                            <h1 style={{ margin: 0, fontSize: '1.8rem' }}>Gestión de Entretenimiento (Trivia)</h1>
+                            <button
+                                onClick={() => {
+                                    setEditingTriviaId(editingTriviaId === 'new' ? null : 'new');
+                                    setTriviaForm({ question: '', answer: '', category: 'General', duration: 15 });
+                                }}
+                                style={{
+                                    padding: '10px 20px',
+                                    background: '#38bdf8',
+                                    color: '#0f172a',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {editingTriviaId === 'new' ? '✖ Cancelar' : '+ Nueva Trivia'}
+                            </button>
+                        </div>
+
+                        {editingTriviaId && (
+                            <div style={cardStyle}>
+                                <h3>{editingTriviaId === 'new' ? 'Crear Nueva Trivia' : 'Editar Trivia'}</h3>
+                                <form onSubmit={handleTriviaSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                    <div style={{ gridColumn: 'span 2' }}>
+                                        <label className="form-label">Pregunta</label>
+                                        <textarea
+                                            className="admin-input"
+                                            value={triviaForm.question}
+                                            onChange={(e) => setTriviaForm({ ...triviaForm, question: e.target.value })}
+                                            required
+                                            style={{ minHeight: '80px' }}
+                                        />
+                                    </div>
+                                    <div style={{ gridColumn: 'span 2' }}>
+                                        <label className="form-label">Respuesta</label>
+                                        <input
+                                            className="admin-input"
+                                            value={triviaForm.answer}
+                                            onChange={(e) => setTriviaForm({ ...triviaForm, answer: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Categoría</label>
+                                        <input
+                                            className="admin-input"
+                                            value={triviaForm.category}
+                                            onChange={(e) => setTriviaForm({ ...triviaForm, category: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Duración (segundos)</label>
+                                        <input
+                                            type="number"
+                                            className="admin-input"
+                                            value={triviaForm.duration}
+                                            onChange={(e) => setTriviaForm({ ...triviaForm, duration: e.target.value })}
+                                            min="5"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Idioma</label>
+                                        <select
+                                            className="admin-input"
+                                            value={triviaForm.language}
+                                            onChange={(e) => setTriviaForm({ ...triviaForm, language: e.target.value })}
+                                            style={{ background: '#0f172a', color: 'white' }}
+                                        >
+                                            <option value="es">Español</option>
+                                            <option value="en">English</option>
+                                            <option value="pt">Português</option>
+                                            <option value="fr">Français</option>
+                                        </select>
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        style={{ gridColumn: 'span 2', padding: '15px', background: '#22c55e', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
+                                    >
+                                        💾 Guardar Trivia
+                                    </button>
+                                </form>
+                            </div>
+                        )}
+
+                        <div style={cardStyle}>
+                            <table style={tableStyle}>
+                                <thead>
+                                    <tr>
+                                        <th style={thStyle}>Pregunta</th>
+                                        <th style={thStyle}>Respuesta</th>
+                                        <th style={thStyle}>Idioma</th>
+                                        <th style={thStyle}>Categoría</th>
+                                        <th style={thStyle}>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {trivias.map(t => (
+                                        <tr key={t.id}>
+                                            <td style={tdStyle}>{t.question}</td>
+                                            <td style={tdStyle}>{t.answer}</td>
+                                            <td style={tdStyle}>
+                                                <span style={{ background: '#334155', padding: '4px 8px', borderRadius: '4px', fontSize: '12px' }}>
+                                                    {t.language?.toUpperCase()}
+                                                </span>
+                                            </td>
+                                            <td style={tdStyle}>{t.category}</td>
+                                            <td style={tdStyle}>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button onClick={() => { setEditingTriviaId(t.id); setTriviaForm(t); }} style={actionButtonStyle('#eab308')}>✏️</button>
+                                                    <button onClick={() => deleteTrivia(t.id)} style={actionButtonStyle('#ef4444')}>🗑️</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div style={{ ...cardStyle, marginTop: '40px', borderTop: '4px solid #ef4444' }}>
+                            <h3 style={{ marginTop: 0 }}>⚙️ Configuración Global de Noticias (RSS)</h3>
+                            <p style={{ color: '#94a3b8', fontSize: '14px' }}>
+                                Introduce la URL de un feed RSS válido (XML) para mostrar titulares en la parte inferior del reproductor.
+                            </p>
+                            <form onSubmit={handleRssSubmit} style={{ display: 'flex', gap: '15px', alignItems: 'flex-end' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label className="form-label">URL del Feed RSS</label>
+                                    <input
+                                        className="admin-input"
+                                        placeholder="http://ejemplo.com/rss.xml"
+                                        value={rssUrl}
+                                        onChange={(e) => setRssUrl(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    style={{ padding: '15px 30px', background: '#ef4444', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
+                                >
+                                    📥 Actualizar Feed
+                                </button>
+                            </form>
+                            {rssMessage && <div style={{ marginTop: '10px', color: '#4ade80', fontWeight: 'bold' }}>{rssMessage}</div>}
+                            <div style={{ marginTop: '15px', fontSize: '12px', color: '#64748b' }}>
+                                Sugerencia: <code>http://feeds.bbci.co.uk/mundo/rss.xml</code> (BBC Mundo)
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '50px', borderTop: '2px solid rgba(255,255,255,0.1)', paddingTop: '40px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h2 style={{ margin: 0 }}>📊 Gestión de Encuestas</h2>
+                                <button
+                                    onClick={() => {
+                                        setEditingPollId(editingPollId === 'new' ? null : 'new');
+                                        setPollForm({ question: '', options: '', category: 'General', language: 'es' });
+                                    }}
+                                    style={{
+                                        padding: '10px 20px',
+                                        background: '#818cf8',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {editingPollId === 'new' ? '✖ Cancelar' : '+ Nueva Encuesta'}
+                                </button>
+                            </div>
+
+                            {editingPollId === 'new' && (
+                                <div style={cardStyle}>
+                                    <h3>Crear Nueva Encuesta</h3>
+                                    <form onSubmit={async (e) => {
+                                        e.preventDefault();
+                                        const optionsArray = pollForm.options.split(',').map(o => o.trim());
+                                        await axios.post('/api/admin/polls', { ...pollForm, options: optionsArray });
+                                        setEditingPollId(null);
+                                        fetchPolls();
+                                    }}>
+                                        <div style={{ marginBottom: '15px' }}>
+                                            <label className="form-label">Pregunta</label>
+                                            <input
+                                                className="admin-input"
+                                                value={pollForm.question}
+                                                onChange={(e) => setPollForm({ ...pollForm, question: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div style={{ marginBottom: '15px' }}>
+                                            <label className="form-label">Idioma</label>
+                                            <select
+                                                className="admin-input"
+                                                value={pollForm.language}
+                                                onChange={(e) => setPollForm({ ...pollForm, language: e.target.value })}
+                                                style={{ background: '#0f172a', color: 'white' }}
+                                            >
+                                                <option value="es">Español</option>
+                                                <option value="en">English</option>
+                                                <option value="pt">Português</option>
+                                                <option value="fr">Français</option>
+                                            </select>
+                                        </div>
+                                        <div style={{ marginBottom: '15px' }}>
+                                            <label className="form-label">Opciones (separadas por comas)</label>
+                                            <input
+                                                className="admin-input"
+                                                placeholder="Opción 1, Opción 2, Opción 3"
+                                                value={pollForm.options}
+                                                onChange={(e) => setPollForm({ ...pollForm, options: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <button type="submit" style={{ padding: '12px 25px', background: '#22c55e', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
+                                            🚀 Publicar Encuesta
+                                        </button>
+                                    </form>
+                                </div>
+                            )}
+
+                            <div style={cardStyle}>
+                                <table style={tableStyle}>
+                                    <thead>
+                                        <tr>
+                                            <th style={thStyle}>Pregunta</th>
+                                            <th style={thStyle}>Idioma</th>
+                                            <th style={thStyle}>Opciones</th>
+                                            <th style={thStyle}>Categoría</th>
+                                            <th style={thStyle}>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {polls.map(p => (
+                                            <tr key={p.id}>
+                                                <td style={tdStyle}>{p.question}</td>
+                                                <td style={tdStyle}>
+                                                    <span style={{ background: '#334155', padding: '4px 8px', borderRadius: '4px', fontSize: '12px' }}>
+                                                        {p.language?.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td style={tdStyle}>{p.options.join(', ')}</td>
+                                                <td style={tdStyle}>{p.category}</td>
+                                                <td style={tdStyle}>
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (window.confirm('¿Eliminar encuesta?')) {
+                                                                await axios.delete(`/api/admin/polls/${p.id}`);
+                                                                fetchPolls();
+                                                            }
+                                                        }}
+                                                        style={actionButtonStyle('#ef4444')}
+                                                    >🗑️</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
-        </div>
+        </div >
     );
 };
 

@@ -33,7 +33,7 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage,
     limits: {
-        fileSize: 100 * 1024 * 1024 // 100MB limit
+        fileSize: 500 * 1024 * 1024 // 500MB limit
     },
     fileFilter: (req, file, cb) => {
         if (file.fieldname === 'video') {
@@ -61,40 +61,30 @@ const LoopVideo = require('../models/LoopVideo');
 // List all loop videos
 exports.listLoopVideos = async (req, res) => {
     try {
-        console.log('>>> [LIST LOOP VIDEOS] Fetching from dir and DB...');
-        await fs.mkdir(VIDEOLOOP_DIR, { recursive: true });
-        const files = await fs.readdir(VIDEOLOOP_DIR);
+        console.log('>>> [LIST LOOP VIDEOS] Fetching from DB...');
+        const videos = await LoopVideo.findAll({
+            order: [['createdAt', 'DESC']]
+        });
 
-        const videoFiles = [];
-        for (const file of files) {
-            const filePath = path.join(VIDEOLOOP_DIR, file);
-            const stats = await fs.stat(filePath);
+        const videoList = videos.map(v => ({
+            filename: v.filename,
+            sourceType: v.sourceType,
+            streamUrl: v.streamUrl,
+            url: v.sourceType === 'file' ? `/public/videoloop/${v.filename}` : v.streamUrl,
+            businessName: v.businessName,
+            targetUrl: v.targetUrl,
+            phoneNumber: v.phoneNumber,
+            description: v.description,
+            logoUrl: v.logoUrl,
+            status: v.status,
+            lat: v.lat,
+            lng: v.lng,
+            address: v.address,
+            email: v.email,
+            createdAt: v.createdAt
+        }));
 
-            if (stats.isFile()) {
-                // Find metadata in DB
-                const metadata = await LoopVideo.findOne({ where: { filename: file } });
-
-                videoFiles.push({
-                    filename: file,
-                    size: stats.size,
-                    url: `/public/videoloop/${file}`,
-                    createdAt: stats.birthtime,
-                    businessName: metadata ? metadata.businessName : '',
-                    targetUrl: metadata ? metadata.targetUrl : '',
-                    phoneNumber: metadata ? metadata.phoneNumber : '',
-                    description: metadata ? metadata.description : '',
-                    logoUrl: metadata ? metadata.logoUrl : '',
-                    status: metadata ? metadata.status : 'active',
-                    lat: metadata ? metadata.lat : null,
-                    lng: metadata ? metadata.lng : null
-                });
-            }
-        }
-
-        // Sort by creation date (newest first)
-        videoFiles.sort((a, b) => b.createdAt - a.createdAt);
-
-        res.json(videoFiles);
+        res.json(videoList);
     } catch (error) {
         console.error('CRITICAL ERROR in listLoopVideos:', error);
         res.status(500).json({ error: `Failed to list videos: ${error.message}` });
@@ -105,17 +95,32 @@ exports.uploadLoopVideo = [
     upload.fields([{ name: 'video', maxCount: 1 }, { name: 'logo', maxCount: 1 }]),
     async (req, res) => {
         try {
-            if (!req.files || !req.files.video) {
-                return res.status(400).json({ error: 'No video file provided' });
+            console.log('>>> [UPLOAD LOOP VIDEO] Request received', {
+                body: req.body,
+                files: req.files ? Object.keys(req.files) : 'none'
+            });
+
+            const videoFile = req.files && req.files.video ? req.files.video[0] : null;
+            const logoFile = req.files && req.files.logo ? req.files.logo[0] : null;
+            const { businessName, targetUrl, phoneNumber, description, lat, lng, address, email, sourceType, streamUrl } = req.body;
+
+            if (sourceType === 'file' && !videoFile) {
+                return res.status(400).json({ error: 'No video file provided for file source' });
             }
 
-            const videoFile = req.files.video[0];
-            const logoFile = req.files.logo ? req.files.logo[0] : null;
-            const { businessName, targetUrl, phoneNumber, description, lat, lng } = req.body;
+            if (sourceType !== 'file' && !streamUrl) {
+                return res.status(400).json({ error: 'Stream URL is required for non-file sources' });
+            }
+
+            const filename = videoFile ? videoFile.filename : `stream_${Date.now()}.url`;
+
+            console.log('>>> [UPLOAD LOOP VIDEO] Saving to DB...', { filename });
 
             // Save metadata to DB
             const metadata = await LoopVideo.create({
-                filename: videoFile.filename,
+                filename,
+                sourceType: sourceType || 'file',
+                streamUrl: streamUrl || '',
                 businessName: businessName || '',
                 targetUrl: targetUrl || '',
                 phoneNumber: phoneNumber || '',
@@ -123,8 +128,12 @@ exports.uploadLoopVideo = [
                 logoUrl: logoFile ? `/public/logos/${logoFile.filename}` : '',
                 status: 'active',
                 lat: lat ? parseFloat(lat) : null,
-                lng: lng ? parseFloat(lng) : null
+                lng: lng ? parseFloat(lng) : null,
+                address: address || '',
+                email: email || ''
             });
+
+            console.log('>>> [UPLOAD LOOP VIDEO] Success');
 
             res.status(201).json({
                 message: 'Video uploaded successfully',
@@ -136,8 +145,12 @@ exports.uploadLoopVideo = [
                 }
             });
         } catch (error) {
-            console.error('Error uploading video:', error);
-            res.status(500).json({ error: 'Failed to upload video' });
+            console.error('>>> [UPLOAD LOOP VIDEO] CRITICAL ERROR:', error);
+            res.status(500).json({
+                error: 'Failed to upload video',
+                details: error.message,
+                stack: error.stack
+            });
         }
     }
 ];
@@ -147,10 +160,10 @@ exports.updateLoopVideoMetadata = [
     async (req, res) => {
         try {
             const filename = req.query.filename || req.params.filename;
-            const { businessName, targetUrl, phoneNumber, description, status, lat, lng } = req.body;
+            const { businessName, targetUrl, phoneNumber, description, status, lat, lng, address, email } = req.body;
             const logoFile = req.files && req.files.logo ? req.files.logo[0] : null;
 
-            console.log(`Update Metadata request for filename: ${filename}`, { businessName, targetUrl, phoneNumber, description, status, lat, lng });
+            console.log(`Update Metadata request for filename: ${filename}`, { businessName, targetUrl, phoneNumber, description, status, lat, lng, address, email });
 
             if (!filename) {
                 return res.status(400).json({ error: 'Filename is required' });
@@ -167,7 +180,12 @@ exports.updateLoopVideoMetadata = [
                     logoUrl: logoFile ? `/public/logos/${logoFile.filename}` : '',
                     status: 'active',
                     lat: lat ? parseFloat(lat) : null,
-                    lng: lng ? parseFloat(lng) : null
+                    lng: lng ? parseFloat(lng) : null,
+                    address: '',
+                    email: '',
+                    sourceType: req.body.sourceType || 'file',
+                    streamUrl: req.body.streamUrl || '',
+                    duration: req.body.duration || 0
                 }
             });
 
@@ -179,6 +197,11 @@ exports.updateLoopVideoMetadata = [
                 if (status !== undefined) metadata.status = status;
                 if (lat !== undefined) metadata.lat = lat ? parseFloat(lat) : null;
                 if (lng !== undefined) metadata.lng = lng ? parseFloat(lng) : null;
+                if (address !== undefined) metadata.address = address;
+                if (email !== undefined) metadata.email = email;
+                if (req.body.sourceType !== undefined) metadata.sourceType = req.body.sourceType;
+                if (req.body.streamUrl !== undefined) metadata.streamUrl = req.body.streamUrl;
+                if (req.body.duration !== undefined) metadata.duration = parseInt(req.body.duration);
                 if (logoFile) {
                     metadata.logoUrl = `/public/logos/${logoFile.filename}`;
                 }

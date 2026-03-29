@@ -7,6 +7,15 @@ const LoopVideo = sequelize.define('LoopVideo', {
         allowNull: false,
         unique: true
     },
+    sourceType: {
+        type: DataTypes.ENUM('file', 'youtube', 'vimeo', 'hls'),
+        defaultValue: 'file',
+        allowNull: false
+    },
+    streamUrl: {
+        type: DataTypes.STRING,
+        allowNull: true // Only for non-'file' sources
+    },
     businessName: {
         type: DataTypes.STRING,
         allowNull: true
@@ -39,6 +48,19 @@ const LoopVideo = sequelize.define('LoopVideo', {
     lng: {
         type: DataTypes.FLOAT,
         allowNull: true
+    },
+    address: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    email: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    duration: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0
     }
 });
 

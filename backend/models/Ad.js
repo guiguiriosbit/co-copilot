@@ -7,6 +7,15 @@ const Ad = sequelize.define('Ad', {
         type: DataTypes.ENUM('image', 'video'),
         allowNull: false
     },
+    sourceType: {
+        type: DataTypes.ENUM('file', 'youtube', 'vimeo', 'hls'),
+        defaultValue: 'file',
+        allowNull: false
+    },
+    streamUrl: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     url: {
         type: DataTypes.STRING,
         allowNull: false

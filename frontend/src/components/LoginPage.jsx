@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 
 const LoginPage = () => {
     const { t } = useTranslation();
-    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     const requestFullscreen = () => {
@@ -20,18 +20,28 @@ const LoginPage = () => {
         }
     };
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
-        // Simple mock validation for MVP
-        if (username === 'client' && password === 'demo') {
-            // Attempt fullscreen
-            requestFullscreen();
-
-            // Store auth and navigate
-            localStorage.setItem('isAuthenticated', 'true');
-            navigate('/player');
-        } else {
-            setError(t('loginPage.invalidCredentials'));
+        setError('');
+        setLoading(true);
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+            const data = await res.json();
+            if (res.ok && data.ok) {
+                requestFullscreen();
+                localStorage.setItem('isAuthenticated', 'true');
+                navigate('/select-profile');
+            } else {
+                setError(data.error || t('loginPage.invalidCredentials'));
+            }
+        } catch (err) {
+            setError('Error conectando con el servidor');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -49,35 +59,31 @@ const LoginPage = () => {
             <p style={{ color: '#64748b', marginBottom: '20px' }}>{t('loginPage.subtitle')}</p>
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '300px' }}>
                 <input
-                    type="text"
-                    placeholder={t('loginPage.username')}
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    style={{ padding: '10px', borderRadius: '5px', border: 'none' }}
-                />
-                <input
                     type="password"
                     placeholder={t('loginPage.password')}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    style={{ padding: '10px', borderRadius: '5px', border: 'none' }}
+                    required
+                    style={{ padding: '10px', borderRadius: '5px', border: 'none', fontSize: '1rem' }}
                 />
-                <button type="submit" style={{
-                    padding: '10px',
-                    background: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold'
-                }}>
-                    {t('loginPage.loginButton')}
+                <button
+                    type="submit"
+                    disabled={loading}
+                    style={{
+                        padding: '10px',
+                        background: loading ? '#1e40af' : '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: '1rem'
+                    }}
+                >
+                    {loading ? 'Verificando...' : t('loginPage.loginButton')}
                 </button>
             </form>
-            {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
-            <p style={{ marginTop: '20px', fontSize: '0.8em', color: '#64748b' }}>
-                Hint: client / demo
-            </p>
+            {error && <p style={{ color: '#f87171', marginTop: '10px' }}>{error}</p>}
         </div>
     );
 };

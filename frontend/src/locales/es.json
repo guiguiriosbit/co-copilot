@@ -69,5 +69,38 @@
     "success": "Éxito",
     "confirm": "Confirmar",
     "cancel": "Cancelar"
+  },
+  "entertainment": {
+    "trivia": {
+      "title": "Trivia del Viaje",
+      "revealing": "Revelando respuesta...",
+      "category": "Categoría"
+    },
+    "news": {
+      "title": "NOTICIAS",
+      "breaking": "ÚLTIMA HORA",
+      "loading": "Cargando noticias..."
+    },
+    "weather": {
+      "title": "Pronóstico",
+      "today": "Hoy",
+      "max": "Máx",
+      "min": "Mín"
+    },
+    "pois": {
+      "title": "Servicios Cercanos",
+      "hospital": "Hospital",
+      "atm": "Cajero",
+      "bank": "Banco",
+      "pharmacy": "Farmacia",
+      "park": "Parque",
+      "fuel": "Gasolinera",
+      "place": "Lugar de interés"
+    },
+    "poll": {
+      "title": "Encuesta Rápida",
+      "thanks": "¡Gracias por tu opinión!",
+      "improvement": "Tu respuesta nos ayuda a mejorar."
+    }
   }
 }

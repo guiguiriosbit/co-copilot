@@ -10,7 +10,7 @@
         "subtitle": "Sistema de Publicidade Contextual",
         "username": "Usuário",
         "password": "Senha",
-        "loginButton": "Entrar",
+        "loginButton": "Iniciar Sessão",
         "adminButton": "Administrador",
         "invalidCredentials": "Credenciais inválidas"
     },
@@ -26,7 +26,7 @@
         "targetUrl": "URL de Destino",
         "videoUrl": "URL do Vídeo",
         "weatherCondition": "Condição Climática",
-        "timeOfDay": "Período do Dia",
+        "timeOfDay": "Momento do Dia",
         "createButton": "Criar",
         "cancel": "Cancelar",
         "editBusiness": "Editar Negócio",
@@ -69,5 +69,37 @@
         "success": "Sucesso",
         "confirm": "Confirmar",
         "cancel": "Cancelar"
+    },
+    "entertainment": {
+        "trivia": {
+            "title": "Trivia da Viagem",
+            "revealing": "Revelando resposta...",
+            "category": "Categoria"
+        },
+        "news": {
+            "title": "NOTÍCIAS",
+            "breaking": "ÚLTIMA HORA",
+            "loading": "Carregando notícias..."
+        },
+        "weather": {
+            "title": "Previsão",
+            "max": "Máx",
+            "min": "Mín"
+        },
+        "pois": {
+            "title": "Serviços Próximos",
+            "hospital": "Hospital",
+            "atm": "Caixa Eletrônico",
+            "bank": "Banco",
+            "pharmacy": "Farmácia",
+            "park": "Parque",
+            "fuel": "Posto de Combustível",
+            "place": "Ponto de Interesse"
+        },
+        "poll": {
+            "title": "Enquete Rápida",
+            "thanks": "Obrigado pela sua opinião!",
+            "improvement": "Sua resposta nos ajuda a melhorar."
+        }
     }
 }

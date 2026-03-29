@@ -69,5 +69,38 @@
         "success": "Success",
         "confirm": "Confirm",
         "cancel": "Cancel"
+    },
+    "entertainment": {
+        "trivia": {
+            "title": "Ride Trivia",
+            "revealing": "Revealing answer...",
+            "category": "Category"
+        },
+        "news": {
+            "title": "NEWS",
+            "breaking": "BREAKING NEWS",
+            "loading": "Loading news..."
+        },
+        "weather": {
+            "title": "Forecast",
+            "today": "Today",
+            "max": "Max",
+            "min": "Min"
+        },
+        "pois": {
+            "title": "Nearby Services",
+            "hospital": "Hospital",
+            "atm": "ATM",
+            "bank": "Bank",
+            "pharmacy": "Pharmacy",
+            "park": "Park",
+            "fuel": "Gas Station",
+            "place": "Point of Interest"
+        },
+        "poll": {
+            "title": "Quick Poll",
+            "thanks": "Thanks for your opinion!",
+            "improvement": "Your answer helps us improve."
+        }
     }
 }

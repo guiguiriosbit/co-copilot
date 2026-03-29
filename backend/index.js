@@ -16,7 +16,8 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '500mb' }));
+app.use(express.urlencoded({ limit: '500mb', extended: true }));
 
 // GLOBAL logger - VERY TOP
 app.use((req, res, next) => {
@@ -32,6 +33,13 @@ app.get('/', (req, res) => {
 const adController = require('./controllers/adController');
 const adminController = require('./controllers/adminController');
 const videoLoopController = require('./controllers/videoLoopController');
+const analyticsController = require('./controllers/analyticsController');
+const authController = require('./controllers/authController');
+const triviaController = require('./controllers/triviaController');
+const newsController = require('./controllers/newsController');
+const locationExtraController = require('./controllers/locationExtraController');
+const pollController = require('./controllers/pollController');
+const passengerController = require('./controllers/passengerController');
 
 // Serve static files from public directory
 app.use('/public', express.static('public'));
@@ -45,6 +53,39 @@ app.post('/api/admin/create', adminController.createBusiness);
 app.get('/api/admin/businesses', adminController.getBusinesses);
 app.put('/api/admin/business/:id', adminController.updateBusiness);
 app.delete('/api/admin/business/:id', adminController.deleteBusiness);
+
+app.post('/api/passenger/register', passengerController.registerPassenger);
+
+// Trivia / Entertainment routes
+app.get('/api/entertainment/trivia', triviaController.getRandomTrivia);
+app.get('/api/admin/trivias', triviaController.getTrivias);
+app.post('/api/admin/trivia', triviaController.createTrivia);
+app.put('/api/admin/trivia/:id', triviaController.updateTrivia);
+app.delete('/api/admin/trivia/:id', triviaController.deleteTrivia);
+
+// News / RSS routes
+app.get('/api/entertainment/news', newsController.getNews);
+app.post('/api/admin/settings/rss', newsController.updateRssUrl);
+
+// Extended Location / Utility routes
+app.get('/api/entertainment/forecast', locationExtraController.getWeatherForecast);
+app.get('/api/entertainment/pois', locationExtraController.getNearbyPOIs);
+
+// Poll / Feedback routes
+app.get('/api/entertainment/poll', pollController.getRandomPoll);
+app.post('/api/entertainment/poll/vote', pollController.submitVote);
+app.get('/api/admin/polls', pollController.getAllPolls);
+app.post('/api/admin/polls', pollController.createPoll);
+app.get('/api/admin/polls/:id/results', pollController.getPollResults);
+app.delete('/api/admin/polls/:id', pollController.deletePoll);
+
+// Auth routes
+app.post('/api/auth/login', authController.login);
+
+// Analytics routes
+app.post('/api/impression', analyticsController.registerImpression);
+app.post('/api/click', analyticsController.registerClick);
+app.get('/api/analytics/impressions', analyticsController.getSummary);
 
 // Video loop management routes - Refactored to Router for stability
 const loopRouter = express.Router();
@@ -112,6 +153,22 @@ async function startServer() {
             }
         }, 60000);
 
+        process.on('SIGINT', () => {
+            console.log('>>> [SERVER] SIGINT received. Closing...');
+            server.close(() => {
+                console.log('>>> [SERVER] Closed.');
+                process.exit(0);
+            });
+        });
+
+        process.on('SIGTERM', () => {
+            console.log('>>> [SERVER] SIGTERM received. Closing...');
+            server.close(() => {
+                console.log('>>> [SERVER] Closed.');
+                process.exit(0);
+            });
+        });
+
     } catch (err) {
         console.error('Failed to start server:', err);
         process.exit(1);
@@ -120,10 +177,21 @@ async function startServer() {
 
 startServer();
 
-// Prevent immediate exit on errors
-process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err);
+// Global error handler - MUST BE LAST
+app.use((err, req, res, next) => {
+    console.error('>>> [GLOBAL ERROR HANDLER]', {
+        message: err.message,
+        stack: err.stack,
+        url: req.url,
+        method: req.method,
+        body: req.body,
+        files: req.files ? Object.keys(req.files) : null
+    });
+
+    res.status(err.status || 500).json({
+        error: err.message || 'Internal Server Error',
+        details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
 });
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
+
+// Startup function

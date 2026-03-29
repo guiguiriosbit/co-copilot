@@ -6,6 +6,20 @@ const Ad = require('../models/Ad');
 const Campaign = require('../models/Campaign');
 const LoopVideo = require('../models/LoopVideo');
 
+// Check if current time (UTC-adjusted to server local) is within HH:MM-HH:MM window
+const isWithinSchedule = (scheduleStart, scheduleEnd) => {
+    if (!scheduleStart || !scheduleEnd) return true; // no schedule = always active
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const [sh, sm] = scheduleStart.split(':').map(Number);
+    const [eh, em] = scheduleEnd.split(':').map(Number);
+    const startMin = sh * 60 + sm;
+    const endMin = eh * 60 + em;
+    // Support overnight ranges (e.g. 22:00 - 06:00)
+    if (startMin <= endMin) return nowMinutes >= startMin && nowMinutes < endMin;
+    return nowMinutes >= startMin || nowMinutes < endMin;
+};
+
 exports.heartbeat = async (req, res) => {
     try {
         const { lat, lng } = req.body;
@@ -46,7 +60,16 @@ exports.heartbeat = async (req, res) => {
             }
         }
 
-        // 2. Fetch and Filter Loop Videos (Priority 2: Proximity)
+        // 2. If a geo-ad matched, check its campaign schedule
+        if (matchedAd) {
+            const campaign = matchedAd.Campaign;
+            if (campaign && !isWithinSchedule(campaign.scheduleStart, campaign.scheduleEnd)) {
+                console.log(`>>> [SCHEDULE] Ad "${campaign.name}" is outside its active hours (${campaign.scheduleStart}-${campaign.scheduleEnd}). Falling to loop.`);
+                matchedAd = null;
+            }
+        }
+
+        // 3. Fetch and Filter Loop Videos (Priority 2: Proximity)
         const activeLoopVideos = await LoopVideo.findAll({ where: { status: 'active' } });
         console.log(`>>> [LOOP] Found ${activeLoopVideos.length} active loop videos in DB`);
 
@@ -55,12 +78,18 @@ exports.heartbeat = async (req, res) => {
 
         for (const meta of activeLoopVideos) {
             const videoData = {
-                url: `/public/videoloop/${meta.filename}`,
+                id: meta.id,
+                filename: meta.filename,
+                sourceType: meta.sourceType,
+                streamUrl: meta.streamUrl,
+                url: meta.sourceType === 'file' ? `/public/videoloop/${meta.filename}` : meta.streamUrl,
                 businessName: meta.businessName || '',
                 targetUrl: meta.targetUrl || '',
                 phoneNumber: meta.phoneNumber || '',
                 description: meta.description || '',
-                logoUrl: meta.logoUrl || ''
+                logoUrl: meta.logoUrl || '',
+                lat: meta.lat,
+                lng: meta.lng
             };
 
             // Check if video has geolocation data
@@ -89,26 +118,47 @@ exports.heartbeat = async (req, res) => {
         regularLoop.sort((a, b) => a.url.localeCompare(b.url));
         nearbyLoop.sort((a, b) => a.url.localeCompare(b.url));
 
-        // 3. Construct Response
-        // If we found nearby loop videos, prioritize them; otherwise use all active videos
-        const finalLoop = nearbyLoop.length > 0 ? nearbyLoop : regularLoop;
+        // 3. Construct Response: Order Logic (Ad First -> Loop)
+        const regularWithoutNearby = regularLoop.filter(rv => !nearbyLoop.some(nv => nv.url === rv.url));
+        let loopSequence = [...nearbyLoop, ...regularWithoutNearby]; // Prioritize nearby within the public loop part
 
-        console.log(`>>> [LOOP] Returning ${finalLoop.length} videos (${nearbyLoop.length} nearby, ${regularLoop.length} total active)`);
+        let finalLoop = [];
 
-        const responseData = matchedAd ? {
-            action: 'play',
-            ad: {
-                id: matchedAd.id,
-                type: matchedAd.type,
+        // 4. Handle Geolocation Ad (Gestion de Negocios) FIRST
+        if (matchedAd) {
+            console.log(`>>> [AD INTEGRATION] Prepending matched ad "${matchedAd.Campaign?.name}" to loop`);
+            finalLoop.push({
                 url: matchedAd.url,
+                streamUrl: matchedAd.streamUrl,
+                sourceType: matchedAd.sourceType,
                 targetUrl: matchedAd.targetUrl,
                 duration: matchedAd.duration,
-                campaign: matchedAd.Campaign?.name || 'Unknown'
-            },
-            loopVideos: finalLoop
-        } : {
-            action: 'loop',
-            loopVideos: finalLoop
+                campaign: matchedAd.Campaign?.name || 'Unknown',
+                id: matchedAd.id,
+                type: matchedAd.type,
+                isAd: true // Special flag for frontend
+            });
+        }
+
+        // 5. Append Public Loop Videos AFTER Ad
+        finalLoop = [...finalLoop, ...loopSequence];
+
+        console.log(`>>> [LOOP] Constructed Ad-First loop. Total items: ${finalLoop.length}`);
+
+        const responseData = {
+            action: matchedAd ? 'play' : 'loop',
+            ad: matchedAd ? {
+                url: matchedAd.url,
+                streamUrl: matchedAd.streamUrl,
+                sourceType: matchedAd.sourceType,
+                targetUrl: matchedAd.targetUrl,
+                duration: matchedAd.duration,
+                campaign: matchedAd.Campaign?.name || 'Unknown',
+                id: matchedAd.id,
+                type: matchedAd.type,
+                isAd: true
+            } : null,
+            loopVideos: loopSequence // Use just the public loop here, since ad is separate
         };
 
         if (!res.headersSent) {

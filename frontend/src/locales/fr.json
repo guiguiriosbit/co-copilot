@@ -1,7 +1,7 @@
 {
     "playerPage": {
-        "nearbyBusiness": "Commerce à Proximité",
-        "currentLocation": "Localisation Actuelle",
+        "nearbyBusiness": "Commerce Proche",
+        "currentLocation": "Lieu Actuel",
         "gpsLabel": "GPS",
         "locationLabel": "Loc"
     },
@@ -17,19 +17,19 @@
     "adminPage": {
         "title": "Panneau d'Administration",
         "backButton": "Retour",
-        "createBusiness": "Créer un Nouveau Commerce",
+        "createBusiness": "Créer Nouveau Commerce",
         "businessName": "Nom du Commerce",
         "campaign": "Campagne",
         "latitude": "Latitude",
         "longitude": "Longitude",
         "radius": "Rayon (mètres)",
-        "targetUrl": "URL Cible",
+        "targetUrl": "URL de Destination",
         "videoUrl": "URL de la Vidéo",
         "weatherCondition": "Condition Météo",
         "timeOfDay": "Moment de la Journée",
         "createButton": "Créer",
         "cancel": "Annuler",
-        "editBusiness": "Modifier le Commerce",
+        "editBusiness": "Modifier Commerce",
         "updateButton": "Mettre à jour",
         "deleteButton": "Supprimer",
         "businessList": "Liste des Commerces",
@@ -69,5 +69,37 @@
         "success": "Succès",
         "confirm": "Confirmer",
         "cancel": "Annuler"
+    },
+    "entertainment": {
+        "trivia": {
+            "title": "Trivia du Voyage",
+            "revealing": "Révélation de la réponse...",
+            "category": "Catégorie"
+        },
+        "news": {
+            "title": "ACTUALITÉS",
+            "breaking": "DERNIÈRE MINUTE",
+            "loading": "Chargement des nouvelles..."
+        },
+        "weather": {
+            "title": "Prévisions",
+            "max": "Max",
+            "min": "Min"
+        },
+        "pois": {
+            "title": "Services à Proximité",
+            "hospital": "Hôpital",
+            "atm": "Distributeur",
+            "bank": "Banque",
+            "pharmacy": "Pharmacie",
+            "park": "Parc",
+            "fuel": "Station-service",
+            "place": "Point d'Intérêt"
+        },
+        "poll": {
+            "title": "Sondage Rapide",
+            "thanks": "Merci pour votre avis !",
+            "improvement": "Votre réponse nous aide à nous améliorer."
+        }
     }
 }

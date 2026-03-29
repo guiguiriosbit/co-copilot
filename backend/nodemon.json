@@ -1,0 +1,15 @@
+{
+    "watch": [
+        "."
+    ],
+    "ext": "js,json",
+    "ignore": [
+        "database.sqlite",
+        "public/**/*",
+        "../frontend/**/*",
+        "backend.log",
+        "*.test.js",
+        "node_modules"
+    ],
+    "delay": "1000"
+}

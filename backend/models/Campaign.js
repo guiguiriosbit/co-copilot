@@ -22,6 +22,34 @@ const Campaign = sequelize.define('Campaign', {
         type: DataTypes.STRING,
         defaultValue: 'active',
         allowNull: false
+    },
+    phoneNumber: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    address: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    email: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    // Optional: active hours for this campaign. Format: 'HH:MM' (24h)
+    scheduleStart: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null  // null = always active
+    },
+    scheduleEnd: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null
+    },
+    radiusKm: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+        defaultValue: 0.1
     }
 });
 
